@@ -25,7 +25,7 @@ with b_i = b_j = 0 would (wrongly) force beta = 2*beta.
 module EquivariantBurnside
 using Oscar
 using Printf
-export bc, bc_structure, bc_structure_tom, bc_direct, AbGroup, ab, format_ab, load_gap!, gapobj, npairs, certify_snf
+export bc, bc_structure, bc_structure_gap, bc_structure_tom, bc_direct, AbGroup, ab, format_ab, load_gap!, gapobj, npairs, certify_snf
 export prepare!, bcclass_init!, BlockMaps, block_maps, symbol_image, class_coords, class_is_zero, class_order
 const GAPFILE = joinpath(@__DIR__, "..", "gap", "bc_structure.g")
 const _gap_loaded = Ref(false)

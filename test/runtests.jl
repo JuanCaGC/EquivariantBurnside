@@ -1,6 +1,9 @@
 using Test
 
 @testset "EquivariantBurnside" begin
+    @testset "structure_oscar" begin
+        include("test_structure_oscar.jl")
+    end
     @testset "validate" begin
         include("test_validate.jl")
     end

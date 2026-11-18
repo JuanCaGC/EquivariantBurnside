@@ -23,6 +23,7 @@ Run the tests with `Pkg.test()` in the Julia session. The original command line 
 ## What it computes today
 
 - The groups B_n(H) for finite abelian H and the combinatorial Burnside groups BC_n(G) of Tschinkel, Yang and Zhang (arXiv:2112.12801), with explicit quotient maps.
+- `bc_structure(G)` computes subgroup and stabilizer data through OSCAR. `bc_structure_gap(G)` retains the GAP oracle. Both accept OSCAR permutation, polycyclic and matrix groups, plus raw GAP groups.
 - `bc` computes BC_n(G) by Theorem 5.2. `bc_direct` keeps the independent computation from the definition. `bc_structure_tom(n)` builds the structure for S_n from Table of Marks data. `certify_snf` returns exact Smith normal form certificates.
 - The image in BC_n(G) of a class given as a sum of symbols, through `prepare!`, `symbol_image`, `class_coords`, `class_is_zero` and `class_order`.
 - Arrangement and chain calculations under `EquivariantBurnside.DCP`.
