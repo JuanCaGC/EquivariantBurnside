@@ -1,0 +1,15 @@
+|G| = 192
+BC_2(G) = BC_2(G) = (Z/2)^71 × (Z/4)^16 × (Z/8)^8 × (Z/16)^2 × (Z/3)^8 × Z^240
+class (s,t)=(1,7) is zero in BC_2(G)?  false  order 48
+class (s,t)=(3,5) is zero in BC_2(G)?  false  order 48
+difference zero in BC_2(G)?           false  order 3
+control (1,7) - (1,7) zero?           true
+  block (7, 2) moduli [4, 0, 0, 0] coordinates [0, 0, 0, 0]
+  block (15, 1) moduli [3, 3, 3, 3, 48, 48, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] coordinates [1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+equality matrix of the classes of the actions (s,-s), s = 1,3,5,7 in BC_2(G) (true = equal):
+  s=1: Any[true, false, false, true]
+  s=3: Any[false, true, true, false]
+  s=5: Any[false, true, true, false]
+  s=7: Any[true, false, false, true]
+certificate: block [A,A] of BC_2(G): 768 generators, 1536 relations, functional mod 3
+  f kills all relations: true     f(difference) = 1 (nonzero means the difference is nonzero)

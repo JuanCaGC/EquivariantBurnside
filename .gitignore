@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# local only: handoff notes, reference papers, agent instruction files, process logs, Codex scratch copies
+handoff/
+refs/
+CODEX_LOG.md
+CLAUDE.md
+AGENTS.md
+**/CLAUDE.md
+**/AGENTS.md
+/task-*/
+
+# papers and LaTeX
+*.pdf
+*.tex
+
+# Julia
+Manifest.toml
+!legacy/bc/Manifest.toml
+.julia/
+docs/build/

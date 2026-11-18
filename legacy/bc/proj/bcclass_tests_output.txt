@@ -1,0 +1,11 @@
+  [PASS] S3: (C3,C3,(1,1)) nonzero in BC_2(S3)
+  [PASS] S3: it has order 2
+  [PASS] S3: 2*(C3,C3,(1,1)) = 0
+  [PASS] S3: (C3,C3,(2,2)) = (C3,C3,(1,1))
+  [PASS] S3: (C3,C3,(1,2)) = 0 by (V)
+  [PASS] S3: (C3,C3,(1)) = (C3,C3,(1,1)) (blowup relation b1=b2)
+  [PASS] D7: BC_3(D7) = Z/2
+  [PASS] D7: the three symbols of Example 6.3 are nonzero
+  [PASS] D7: they are equal
+  [PASS] D7: their sum (the class) is nonzero in BC_3(D7)
+passed 10, failed 0

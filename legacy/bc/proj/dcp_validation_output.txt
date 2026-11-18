@@ -1,0 +1,201 @@
+2026/11/18 11:19:44.0026: [25340743]:  WARNING:       mongoc: Falling back to malloc for counters.
+Julia 1.12.4 OSCAR 1.8.2 GAP 4.16.1
+DATA S4 affine elements=15 classes=5 scalar_order=1 arrangement_seconds=0.217
+ROW 1 groups=[2] dims=[2] N=4 Delta=C2 basis_orders=[2] chars=[[1]] normal=[[1]]
+  BASIS ["[ [ 1, 0, 0 ], [ 0, 0, 1 ], [ 0, 1, 0 ] ]"]
+  SPACES ["[ [ 1, 0, 0 ], [ 0, 1, 1 ] ]"]
+ROW 2 groups=[4] dims=[1] N=8 Delta=C2 basis_orders=[2] chars=[[1]] normal=[[1]]
+  BASIS ["[ [ -1, 0, 0 ], [ -1, 0, 1 ], [ -1, 1, 0 ] ]"]
+  SPACES ["[ [ 1, -1, -1 ] ]"]
+ROW 3 groups=[4, 2] dims=[1, 2] N=4 Delta=C2 x C2 basis_orders=[2, 2] chars=[[1, 1], [1, 0]] normal=[[1, 1], [0, 1]]
+  BASIS ["[ [ -1, 0, 0 ], [ -1, 0, 1 ], [ -1, 1, 0 ] ]", "[ [ -1, 0, 0 ], [ -1, 1, 0 ], [ -1, 0, 1 ] ]"]
+  SPACES ["[ [ 1, -1, -1 ] ]", "[ [ 1, 0, 0 ], [ 0, 1, 1 ] ]"]
+ROW 4 groups=[6] dims=[1] N=6 Delta=1 basis_orders=Int64[] chars=[Int64[]] normal=[Int64[]]
+  BASIS String[]
+  SPACES ["[ [ 1, 1, -3 ] ]"]
+ROW 5 groups=[6, 2] dims=[1, 2] N=2 Delta=C2 basis_orders=[2] chars=[[0], [1]] normal=[[0], [1]]
+  BASIS ["[ [ -1, 0, 0 ], [ -1, 1, 0 ], [ -1, 0, 1 ] ]"]
+  SPACES ["[ [ 1, 1, -3 ] ]", "[ [ 1, 0, -2 ], [ 0, 1, -1 ] ]"]
+ROW 6 groups=[24] dims=[0] N=24 Delta=1 basis_orders=Int64[] chars=[Int64[]] normal=[Int64[]]
+  BASIS String[]
+  SPACES ["[  ]"]
+ROW 7 groups=[24, 2] dims=[0, 2] N=4 Delta=C2 basis_orders=[2] chars=[[0], [1]] normal=[[0], [1]]
+  BASIS ["[ [ 1, 0, 0 ], [ 0, 0, 1 ], [ 0, 1, 0 ] ]"]
+  SPACES ["[  ]", "[ [ 1, 0, 0 ], [ 0, 1, 1 ] ]"]
+ROW 8 groups=[24, 4] dims=[0, 1] N=8 Delta=C2 basis_orders=[2] chars=[[0], [1]] normal=[[0], [1]]
+  BASIS ["[ [ -1, 0, 0 ], [ -1, 0, 1 ], [ -1, 1, 0 ] ]"]
+  SPACES ["[  ]", "[ [ 1, -1, -1 ] ]"]
+ROW 9 groups=[24, 4, 2] dims=[0, 1, 2] N=4 Delta=C2 x C2 basis_orders=[2, 2] chars=[[0, 0], [1, 1], [1, 0]] normal=[[0, 0], [1, 1], [0, 1]]
+  BASIS ["[ [ -1, 0, 0 ], [ -1, 0, 1 ], [ -1, 1, 0 ] ]", "[ [ -1, 0, 0 ], [ -1, 1, 0 ], [ -1, 0, 1 ] ]"]
+  SPACES ["[  ]", "[ [ 1, -1, -1 ] ]", "[ [ 1, 0, 0 ], [ 0, 1, 1 ] ]"]
+ROW 10 groups=[24, 6] dims=[0, 1] N=6 Delta=1 basis_orders=Int64[] chars=[Int64[], Int64[]] normal=[Int64[], Int64[]]
+  BASIS String[]
+  SPACES ["[  ]", "[ [ 1, 1, -3 ] ]"]
+ROW 11 groups=[24, 6, 2] dims=[0, 1, 2] N=2 Delta=C2 basis_orders=[2] chars=[[0], [0], [1]] normal=[[0], [0], [1]]
+  BASIS ["[ [ -1, 0, 0 ], [ -1, 1, 0 ], [ -1, 0, 1 ] ]"]
+  SPACES ["[  ]", "[ [ 1, 1, -3 ] ]", "[ [ 1, 0, -2 ], [ 0, 1, -1 ] ]"]
+PASS S4 affine generic stabilizers central in flag normalizers
+PASS S4 affine characters jointly faithful
+PASS S4 affine flag orbit sizes account for every flag
+PASS KT Table 1 row count
+PASS KT Table 1 row 1
+PASS KT Table 1 row 2
+PASS KT Table 1 row 3
+PASS KT Table 1 row 4
+PASS KT Table 1 row 5
+PASS KT Table 1 row 6
+PASS KT Table 1 row 7
+PASS KT Table 1 row 8
+PASS KT Table 1 row 9
+PASS KT Table 1 row 10
+PASS KT Table 1 row 11
+DATA S4 projective elements=37 classes=8 scalar_order=1 arrangement_seconds=0.027
+ROW 1 groups=[2] dims=[2] N=8 Delta=C2 basis_orders=[2] chars=[[1], [0]] normal=[[1]]
+  BASIS ["[ [ 0, -1, 1 ], [ 0, -1, 0 ], [ 1, -1, 0 ] ]"]
+  SPACES ["[ [ 1, 0, -1 ], [ 0, 1, 0 ] ]"]
+ROW 2 groups=[2] dims=[2] N=4 Delta=C2 basis_orders=[2] chars=[[0], [1]] normal=[[1]]
+  BASIS ["[ [ 1, 0, 0 ], [ 0, 0, 1 ], [ 0, 1, 0 ] ]"]
+  SPACES ["[ [ 1, 0, 0 ], [ 0, 1, 1 ] ]"]
+ROW 3 groups=[3] dims=[1] N=3 Delta=1 basis_orders=Int64[] chars=[Int64[], Int64[]] normal=[Int64[]]
+  BASIS String[]
+  SPACES ["[ [ 1, E(3), 0 ] ]"]
+ROW 4 groups=[4] dims=[1] N=4 Delta=C2 basis_orders=[2] chars=[[1], [0]] normal=[[1]]
+  BASIS ["[ [ -1, 0, 0 ], [ -1, 1, 0 ], [ -1, 0, 1 ] ]"]
+  SPACES ["[ [ 1, 0, 0 ] ]"]
+ROW 5 groups=[4, 2] dims=[1, 2] N=4 Delta=C2 x C2 basis_orders=[2, 2] chars=[[1, 1], [1, 0], [0, 0]] normal=[[0, 1], [1, 0]]
+  BASIS ["[ [ -1, 0, 0 ], [ -1, 0, 1 ], [ -1, 1, 0 ] ]", "[ [ -1, 0, 0 ], [ -1, 1, 0 ], [ -1, 0, 1 ] ]"]
+  SPACES ["[ [ 1, 0, 0 ] ]", "[ [ 1, 0, 0 ], [ 0, 1, -1 ] ]"]
+ROW 6 groups=[4, 2] dims=[1, 2] N=4 Delta=C2 x C2 basis_orders=[2, 2] chars=[[1, 1], [0, 0], [1, 0]] normal=[[1, 1], [1, 0]]
+  BASIS ["[ [ -1, 0, 0 ], [ -1, 0, 1 ], [ -1, 1, 0 ] ]", "[ [ -1, 0, 0 ], [ -1, 1, 0 ], [ -1, 0, 1 ] ]"]
+  SPACES ["[ [ 1, 0, 0 ] ]", "[ [ 1, 0, 0 ], [ 0, 1, 1 ] ]"]
+ROW 7 groups=[4] dims=[1] N=4 Delta=1 basis_orders=Int64[] chars=[Int64[], Int64[]] normal=[Int64[]]
+  BASIS String[]
+  SPACES ["[ [ 1, E(4), -E(4) ] ]"]
+ROW 8 groups=[4, 2] dims=[1, 2] N=4 Delta=C4 basis_orders=[4] chars=[[1], [3], [2]] normal=[[2], [3]]
+  BASIS ["[ [ 0, -1, 1 ], [ 1, -1, 0 ], [ 0, -1, 0 ] ]"]
+  SPACES ["[ [ 1, E(4), -E(4) ] ]", "[ [ 1, 0, 0 ], [ 0, 1, -1 ] ]"]
+ROW 9 groups=[6] dims=[1] N=6 Delta=1 basis_orders=Int64[] chars=[Int64[], Int64[]] normal=[Int64[]]
+  BASIS String[]
+  SPACES ["[ [ 1, 1, -3 ] ]"]
+ROW 10 groups=[6, 2] dims=[1, 2] N=2 Delta=C2 basis_orders=[2] chars=[[0], [0], [1]] normal=[[0], [1]]
+  BASIS ["[ [ -1, 0, 0 ], [ -1, 1, 0 ], [ -1, 0, 1 ] ]"]
+  SPACES ["[ [ 1, 1, -3 ] ]", "[ [ 1, 0, -2 ], [ 0, 1, -1 ] ]"]
+ROW 11 groups=[8] dims=[1] N=8 Delta=C2 basis_orders=[2] chars=[[0], [1]] normal=[[1]]
+  BASIS ["[ [ -1, 0, 0 ], [ -1, 0, 1 ], [ -1, 1, 0 ] ]"]
+  SPACES ["[ [ 1, -1, -1 ] ]"]
+ROW 12 groups=[8, 2] dims=[1, 2] N=4 Delta=C2 x C2 basis_orders=[2, 2] chars=[[1, 0], [1, 1], [0, 1]] normal=[[0, 1], [1, 0]]
+  BASIS ["[ [ 0, -1, 1 ], [ 0, -1, 0 ], [ 1, -1, 0 ] ]", "[ [ -1, 0, 0 ], [ -1, 0, 1 ], [ -1, 1, 0 ] ]"]
+  SPACES ["[ [ 1, -1, -1 ] ]", "[ [ 1, 0, -1 ], [ 0, 1, 0 ] ]"]
+ROW 13 groups=[8, 2] dims=[1, 2] N=4 Delta=C2 x C2 basis_orders=[2, 2] chars=[[0, 0], [1, 1], [1, 0]] normal=[[1, 1], [0, 1]]
+  BASIS ["[ [ -1, 0, 0 ], [ -1, 0, 1 ], [ -1, 1, 0 ] ]", "[ [ -1, 0, 0 ], [ -1, 1, 0 ], [ -1, 0, 1 ] ]"]
+  SPACES ["[ [ 1, -1, -1 ] ]", "[ [ 1, 0, 0 ], [ 0, 1, 1 ] ]"]
+PASS S4 projective generic stabilizers central in flag normalizers
+PASS S4 projective characters jointly faithful
+PASS S4 projective flag orbit sizes account for every flag
+PASS KT Table 2 row count
+PASS KT Table 2 row 1
+PASS KT Table 2 row 2
+PASS KT Table 2 row 3
+PASS KT Table 2 row 4
+PASS KT Table 2 row 5
+PASS KT Table 2 row 6
+PASS KT Table 2 row 7
+PASS KT Table 2 row 8
+PASS KT Table 2 row 9
+PASS KT Table 2 row 10
+PASS KT Table 2 row 11
+PASS KT Table 2 row 12
+PASS KT Table 2 row 13
+PASS KT Table 2 row 10 Delta is normal Klein four
+TIME S4 tables 1.854 seconds
+DATA C3 x D5 elements=20 classes=7 scalar_order=1 arrangement_seconds=0.958
+ROW 1 groups=[2] dims=[2] N=6 Delta=C2 basis_orders=[2] chars=[[0], [1]] normal=[[1]]
+  BASIS ["[ [ 1, 0, 0 ], [ 0, 0, 1 ], [ 0, 1, 0 ] ]"]
+  SPACES ["[ [ 1, 0, 0 ], [ 0, 1, 1 ] ]"]
+ROW 2 groups=[3] dims=[2] N=30 Delta=C3 basis_orders=[3] chars=[[1], [0]] normal=[[2]]
+  BASIS ["[ [ 1, 0, 0 ], [ 0, E(3), 0 ], [ 0, 0, E(3) ] ]"]
+  SPACES ["[ [ 0, 1, 0 ], [ 0, 0, 1 ] ]"]
+ROW 3 groups=[6] dims=[1] N=6 Delta=1 basis_orders=Int64[] chars=[Int64[], Int64[]] normal=[Int64[]]
+  BASIS String[]
+  SPACES ["[ [ 0, 1, 1 ] ]"]
+ROW 4 groups=[6, 2] dims=[1, 2] N=6 Delta=C6 basis_orders=[6] chars=[[2], [0], [5]] normal=[[4], [5]]
+  BASIS ["[ [ 1, 0, 0 ], [ 0, 0, E(3) ], [ 0, E(3), 0 ] ]"]
+  SPACES ["[ [ 0, 1, 1 ] ]", "[ [ 1, 0, 0 ], [ 0, 1, 1 ] ]"]
+ROW 5 groups=[6, 3] dims=[1, 2] N=6 Delta=C6 basis_orders=[6] chars=[[2], [5], [0]] normal=[[3], [1]]
+  BASIS ["[ [ 1, 0, 0 ], [ 0, 0, E(3) ], [ 0, E(3), 0 ] ]"]
+  SPACES ["[ [ 0, 1, 1 ] ]", "[ [ 0, 1, 0 ], [ 0, 0, 1 ] ]"]
+ROW 6 groups=[6] dims=[1] N=6 Delta=C2 basis_orders=[2] chars=[[1], [0]] normal=[[1]]
+  BASIS ["[ [ 1, 0, 0 ], [ 0, 0, 1 ], [ 0, 1, 0 ] ]"]
+  SPACES ["[ [ 0, 1, -1 ] ]"]
+ROW 7 groups=[6, 3] dims=[1, 2] N=6 Delta=C6 basis_orders=[6] chars=[[5], [2], [0]] normal=[[3], [4]]
+  BASIS ["[ [ 1, 0, 0 ], [ 0, 0, E(3) ], [ 0, E(3), 0 ] ]"]
+  SPACES ["[ [ 0, 1, -1 ] ]", "[ [ 0, 1, 0 ], [ 0, 0, 1 ] ]"]
+ROW 8 groups=[15] dims=[1] N=15 Delta=1 basis_orders=Int64[] chars=[Int64[], Int64[]] normal=[Int64[]]
+  BASIS String[]
+  SPACES ["[ [ 0, 1, 0 ] ]"]
+ROW 9 groups=[15, 3] dims=[1, 2] N=15 Delta=C15 basis_orders=[15] chars=[[8], [2], [0]] normal=[[9], [13]]
+  BASIS ["[ [ 1, 0, 0 ], [ 0, E(15)^8, 0 ], [ 0, 0, E(15)^2 ] ]"]
+  SPACES ["[ [ 0, 1, 0 ] ]", "[ [ 0, 1, 0 ], [ 0, 0, 1 ] ]"]
+ROW 10 groups=[30] dims=[1] N=30 Delta=C3 basis_orders=[3] chars=[[0], [1]] normal=[[1]]
+  BASIS ["[ [ 1, 0, 0 ], [ 0, E(3), 0 ], [ 0, 0, E(3) ] ]"]
+  SPACES ["[ [ 1, 0, 0 ] ]"]
+ROW 11 groups=[30, 2] dims=[1, 2] N=6 Delta=C6 basis_orders=[6] chars=[[0], [2], [5]] normal=[[2], [3]]
+  BASIS ["[ [ 1, 0, 0 ], [ 0, 0, E(3) ], [ 0, E(3), 0 ] ]"]
+  SPACES ["[ [ 1, 0, 0 ] ]", "[ [ 1, 0, 0 ], [ 0, 1, 1 ] ]"]
+PASS C3 x D5 generic stabilizers central in flag normalizers
+PASS C3 x D5 characters jointly faithful
+PASS C3 x D5 flag orbit sizes account for every flag
+PASS EB Table 5 row count
+PASS EB Table 5 row 1 printed character prefix
+PASS EB Table 5 row 2 printed character prefix
+PASS EB Table 5 row 3 printed character prefix
+PASS EB Table 5 row 4 printed character prefix
+PASS EB Table 5 row 5 printed character prefix
+PASS EB Table 5 row 6 printed character prefix
+PASS EB Table 5 row 7 printed character prefix
+PASS EB Table 5 row 8 printed character prefix
+PASS EB Table 5 row 9 printed character prefix
+PASS EB Table 5 row 10 printed character prefix
+PASS EB Table 5 row 11 printed character prefix
+DATA D7 elements=19 classes=5 scalar_order=1 arrangement_seconds=0.421
+ROW 1 groups=[2] dims=[2] N=2 Delta=C2 basis_orders=[2] chars=[[0], [1]] normal=[[1]]
+  BASIS ["[ [ 0, 1, 0, 0 ], [ 1, 0, 0, 0 ], [ 0, 0, 0, 1 ], [ 0, 0, 1, 0 ] ]"]
+  SPACES ["[ [ 1, 1, 0, 0 ], [ 0, 0, 1, 1 ] ]"]
+ROW 2 groups=[2] dims=[2] N=2 Delta=C2 basis_orders=[2] chars=[[1], [0]] normal=[[1]]
+  BASIS ["[ [ 0, 1, 0, 0 ], [ 1, 0, 0, 0 ], [ 0, 0, 0, 1 ], [ 0, 0, 1, 0 ] ]"]
+  SPACES ["[ [ 1, -1, 0, 0 ], [ 0, 0, 1, -1 ] ]"]
+ROW 3 groups=[7] dims=[1] N=7 Delta=1 basis_orders=Int64[] chars=[Int64[], Int64[]] normal=[Int64[]]
+  BASIS String[]
+  SPACES ["[ [ 1, 0, 0, 0 ] ]"]
+ROW 4 groups=[7] dims=[1] N=7 Delta=1 basis_orders=Int64[] chars=[Int64[], Int64[]] normal=[Int64[]]
+  BASIS String[]
+  SPACES ["[ [ 0, 0, 1, 0 ] ]"]
+PASS D7 generic stabilizers central in flag normalizers
+PASS D7 characters jointly faithful
+PASS D7 flag orbit sizes account for every flag
+PASS EB Table 6 row count
+PASS EB Table 6 row 1
+PASS EB Table 6 row 2
+PASS EB Table 6 C7 Delta and normalizer for eigen-orbit 1
+PASS EB Table 6 C7 Delta and normalizer for eigen-orbit 2
+FAIL EB Table 6 literal C7 characters relative to displayed rotation | documented basis discrepancy: computed [1, 2], printed [2, 3]
+PASS EB Table 6 rows 3 and 4 after explicit generator change r -> r^2 | input rotation gives [1, 2], changed rotation gives [2, 3]
+PASS EB Table 6 row 3 Gamma-character after r -> r^2
+PASS EB Table 6 row 4 Gamma-character after r -> r^2
+TIME EB tables 1.800 seconds
+PASS KT Proposition 9.2 S3 full lattice including infinity | computed=(10, 5) predicted=(10, 5) seconds=0.023
+PASS KT Proposition 9.2 S4 full lattice including infinity | computed=(38, 9) predicted=(38, 9) seconds=0.097
+PASS KT Proposition 9.2 S5 full lattice including infinity | computed=(166, 13) predicted=(166, 13) seconds=0.224
+PASS KT Proposition 9.2 S6 full lattice including infinity | computed=(832, 22) predicted=(832, 22) seconds=0.753
+TIME Sn counts 1.279 seconds
+PASS diagonal C3 projective three isolated eigenspaces
+PASS diagonal C3 affine fixed axis only
+PASS diagonal C2 squared projective coordinate arrangement
+PASS nontrivial scalar C3 projective empty boundary
+PASS scalar C3 affine origin divisor
+PASS C6 with scalar C3 and two projective boundary components
+TIME independent diagonal examples 0.218 seconds
+SUMMARY unexpected_failures=0 documented_basis_discrepancies=1
+real 191.27
+user 187.15
+sys 2.43

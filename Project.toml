@@ -1,0 +1,19 @@
+name = "EquivariantBurnside"
+uuid = "d280fea5-dd0f-4e3c-a26d-9261118a319d"
+authors = ["Juan Camilo Gonzalez"]
+version = "0.1.0-dev"
+
+[deps]
+Oscar = "f1435218-dba5-11e9-1e4d-f1a5fab5fc13"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+
+[compat]
+julia = "1.10"
+Oscar = "~1.8"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
