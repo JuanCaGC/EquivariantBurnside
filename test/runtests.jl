@@ -34,4 +34,7 @@ using Test
     @testset "certificates adversarial (independent, Codex)" begin
         include("test_certificates_adversarial.jl")
     end
+    @testset "transport and automorphisms" begin
+        include("test_transport.jl")
+    end
 end

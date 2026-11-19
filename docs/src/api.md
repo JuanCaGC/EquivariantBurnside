@@ -31,6 +31,15 @@ bc_image
 bc_blocks
 ```
 
+## Transport and automorphisms
+
+```@docs
+bc_transport
+bc_out_automorphisms
+bc_find_automorphism
+bc_inequivalence_certificates
+```
+
 ## Certificates
 
 ```@docs
