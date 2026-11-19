@@ -28,4 +28,10 @@ using Test
     @testset "symbols errors and certificates" begin
         include("test_symbols_errors.jl")
     end
+    @testset "symbols adversarial (independent, Codex)" begin
+        include("test_symbols_adversarial.jl")
+    end
+    @testset "certificates adversarial (independent, Codex)" begin
+        include("test_certificates_adversarial.jl")
+    end
 end

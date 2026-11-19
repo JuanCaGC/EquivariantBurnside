@@ -177,6 +177,36 @@ end
     @test code != 0 && startswith(msg, "INVALID")
 end
 
+@testset "T4b corruptions found by mutation testing (D_7, m = 7)" begin
+    D7 = dihedral_group(PermGroup, 14)
+    r7 = first(filter(g -> order(g) == 7, collect(D7)))
+    x = bc_image(BCSymbol(D7, [r7], [r7], [[1], [1], [2]]), 3)
+    dir = mktempdir()
+    good = joinpath(dir, "d7.txt")
+    write_certificate(good, certificate_nonzero(x))
+    base = readlines(good)
+    @test verify(good) && verify_with_group(read_certificate(good))
+    function variant(name, f)
+        path = joinpath(dir, name * ".txt")
+        write(path, join(f(copy(base)), "\n") * "\n")
+        return path
+    end
+    idx(prefix) = findfirst(l -> startswith(l, prefix), base)
+    # a permutation of the characters that fixes the zero character but is not additive (spec item 1 of the verifier)
+    p = variant("nonadditive", ls -> begin
+        i = idx("perm "); w = split(ls[i]); w[3], w[4] = w[4], w[3]; ls[i] = join(w, " "); ls
+    end)
+    @test !verify(p)
+    # block_ydesc is checked by verify_with_group (spec section 5), the standalone verifier does not see it
+    y = variant("ydesc", ls -> (ls[idx("block_ydesc")] = "block_ydesc C13"; ls))
+    @test verify(y) && !verify_with_group(read_certificate(y))
+    # two gen lines exchanged: the list is no longer in ascending lexicographic order (spec item 2)
+    g = variant("genorder", ls -> begin
+        i = idx("gen "); ls[i], ls[i+1] = ls[i+1], ls[i]; ls
+    end)
+    @test !verify(g)
+end
+
 @testset "certificates for matrix and polycyclic groups" begin
     P = small_group(27, 3)
     h = first(filter(g -> order(g) == 3, gens(P)))
