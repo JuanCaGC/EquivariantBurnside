@@ -40,4 +40,7 @@ using Test
     @testset "audit of the engine against the definition" begin
         include("test_audit_theta2.jl")
     end
+    @testset "restriction correction: models and Example 7.5" begin
+        include("test_phi_models.jl")
+    end
 end

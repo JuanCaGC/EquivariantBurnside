@@ -414,15 +414,76 @@ function _term_string(coef, s::BCSymbol)
     return "$(coef) H<$(gs(s.hg))> Y<$(gs(s.yg))> betas=$(s.betas)"
 end
 
+# ---------------------------------------------------------------------------
+# Blowup correction.
+#  P1 The decomposition of Theorem 5.2 used by the engine imposes the blowup relation (B) without the term Theta_2
+#     that lives in the smaller subgroup Hbar = Ker(b1 - b2). The group of the definition (EBGLA section 3.2) has
+#     that term. The two quotients F/R_true and F/R1 of the free group F on symbols are different, but there is
+#     an automorphism phi of F, triangular with respect to |H|, with phi(R_true) = R1:
+#         phi(H, Y, beta) = sum over subgroups 1 != K <= H such that every b_i restricted to K is nonzero of
+#                           (K, Y, beta restricted to K).
+#     The term K = H has coefficient one. The image of a class v in BC_n(G) is then the engine value of phi(v).
+#     This formula is due to an independent derivation (Codex, task fase2b) and was checked here against the
+#     presentation of the definition, see `scripts/audit_theta2.jl` and `test/test_audit_theta2.jl`.
+#     `bc_image(cls, blowup_correction = false)` returns the raw engine value, which is not invariant under blowup.
+# ---------------------------------------------------------------------------
+
+# The symbols of phi(s) as (coefficient, symbol) pairs, the symbol itself first.
+function _restriction_terms(s::BCSymbol)
+    Gg = s.Ggap
+    Hs = GAP.Globals.Subgroup(Gg, GAP.GapObj(s.hg))
+    sizeH = Int(GAP.Globals.Size(Hs))
+    out = Tuple{Int,BCSymbol}[(1, s)]
+    sizeH == 1 && return out
+    els = GAP.Globals.AsSSortedList(Hs)
+    exps = Dict{Int,Vector{Int}}()
+    for e in Iterators.product((0:(o - 1) for o in s.ords)...)
+        g = GAP.Globals.One(Gg)
+        for (h, k) in zip(s.hg, e)
+            g = GAP.Globals.PROD(g, GAP.Globals.POW(h, k))
+        end
+        exps[Int(GAP.Globals.Position(els, g))] = collect(e)
+    end
+    yg = vcat(s.hg, s.yg)
+    subs = GAP.Globals.AllSubgroups(Hs)
+    for i in 1:length(subs)
+        K = subs[i]
+        sizeK = Int(GAP.Globals.Size(K))
+        (sizeK == 1 || sizeK == sizeH) && continue
+        ig = GAP.Globals.IndependentGeneratorsOfAbelianGroup(K)
+        kg = Any[ig[j] for j in 1:length(ig)]
+        kord = [Int(GAP.Globals.Order(g)) for g in kg]
+        kexps = [exps[Int(GAP.Globals.Position(els, g))] for g in kg]
+        betas = Vector{Int}[]
+        ok = true
+        for c in s.betas
+            cp = Int[]
+            for (e, o) in zip(kexps, kord)
+                v = sum(c[j] * e[j] // s.ords[j] for j in eachindex(e)) * o
+                denominator(v) == 1 || error("a character does not restrict to an integer exponent")
+                push!(cp, mod(Int(numerator(v)), o))
+            end
+            if all(==(0), cp)
+                ok = false
+                break
+            end
+            push!(betas, cp)
+        end
+        ok || continue
+        push!(out, (1, _bcsymbol(s.G, kg, yg, betas, false)))
+    end
+    return out
+end
+
 """
-    bc_image(cls::BCClass)
-    bc_image(s::BCSymbol, n::Integer)
+    bc_image(cls::BCClass; blowup_correction = true)
+    bc_image(s::BCSymbol, n::Integer; blowup_correction = true)
 
 Evaluate a formal class or a single symbol.
 
 Pass a formal class `cls`, or a symbol `s` with positive dimension `n`. Returns a `BCElement` in BC_n(G), preparing the group data automatically and discarding zero components.
 
-The image in BC_n(G) of a class given as an integer combination of symbols, block by block.
+The image in BC_n(G), the combinatorial Burnside group defined by the relations (O), (C), (V) and (B) with its Theta_2 term, of a class given as an integer combination of symbols. The group is computed block by block through Theorem 5.2 of Tschinkel-Yang-Zhang, in which the blowup relation has no Theta_2 term, so each symbol `(H, Y, beta)` is first replaced by the sum, over the subgroups `K <= H` with every `b_i` restricted to `K` nonzero, of `(K, Y, beta|_K)`. This change of basis is an automorphism of the group of symbols, triangular with respect to `|H|`, that carries the relations of the definition onto those used by the blocks. With `blowup_correction = false` the symbols are evaluated as they are, which is not invariant under blowup of a point with distinct weights and is kept for audits.
 
 # Examples
 
@@ -439,21 +500,24 @@ println(bc_image(a, 2) == bc_image(b, 2))
 true
 ```
 """
-function bc_image(cls::BCClass)
+function bc_image(cls::BCClass; blowup_correction::Bool = true)
     Gg = cls.Ggap
     _ensure_prepared!(Gg)
     n = cls.n
     acc = Dict{Tuple{Int,Int},Vector{Int}}()
     bms = Dict{Tuple{Int,Int},BlockMaps}()
     cvec = Dict{Tuple{Int,Int},Dict{Vector{Int},Int}}()
-    for (coef, s) in cls.terms
-        coef == 0 && continue
-        b, p, v, bm, key = symbol_image(Gg, n, s.hg, s.yg, s.betas)
-        w = get!(acc, (b, p), zeros(Int, length(v)))
-        w .+= coef .* v
-        bms[(b, p)] = bm
-        cv = get!(cvec, (b, p), Dict{Vector{Int},Int}())
-        cv[key] = get(cv, key, 0) + coef
+    for (coef0, s0) in cls.terms
+        coef0 == 0 && continue
+        for (c2, s) in (blowup_correction ? _restriction_terms(s0) : [(1, s0)])
+            coef = coef0 * c2
+            b, p, v, bm, key = symbol_image(Gg, n, s.hg, s.yg, s.betas)
+            w = get!(acc, (b, p), zeros(Int, length(v)))
+            w .+= coef .* v
+            bms[(b, p)] = bm
+            cv = get!(cvec, (b, p), Dict{Vector{Int},Int}())
+            cv[key] = get(cv, key, 0) + coef
+        end
     end
     tab = _blocktable()
     blks = Dict{BlockKey,BlockData}()
@@ -470,10 +534,10 @@ function bc_image(cls::BCClass)
     return BCElement(cls.G, Gg, n, blks, [_term_string(c, s) for (c, s) in cls.terms if c != 0])
 end
 
-function bc_image(s::BCSymbol, n::Integer)
+function bc_image(s::BCSymbol, n::Integer; blowup_correction::Bool = true)
     cls = BCClass(s.G, n)
     push!(cls, s)
-    return bc_image(cls)
+    return bc_image(cls; blowup_correction = blowup_correction)
 end
 
 Base.iszero(x::BCElement) = isempty(x.blocks)
