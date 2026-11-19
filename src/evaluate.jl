@@ -79,6 +79,13 @@ const _loaded = Ref(false)
 # The group whose block data is currently stored in the GAP global BCB, and the lazily built table of block names.
 const _prepared = Ref{Any}(nothing)
 const _block_table = Ref{Any}(nothing)
+"""
+    bcclass_init!()
+
+Initialize the GAP symbol evaluation routines.
+
+Takes no arguments. Returns `true` after the first initialization and `nothing` on subsequent calls. Call it for its initialization side effect. Repeated calls reuse the initialized routines.
+"""
 function bcclass_init!()
     _loaded[] && return
     load_gap!()
@@ -86,7 +93,29 @@ function bcclass_init!()
     _loaded[] = true
 end
 
-"""Build the block data (GAP side) for G.  Must be called before `symbol_image` for a new group."""
+"""
+    prepare!(G)
+
+Prepare the GAP block data for symbol evaluation.
+
+The argument `G` is a raw GAP group. Returns the result of `BCBuild`, the number of abelian subgroup blocks. Replaces the current prepared group and invalidates its block-name table. Call before low level evaluation for a new group. High level `bc_image` prepares automatically.
+
+Build the block data (GAP side) for G.  Must be called before `symbol_image` for a new group.
+
+# Examples
+
+```jldoctest
+G = gapobj(symmetric_group(3))
+h = Oscar.GAP.Globals.GeneratorsOfGroup(Oscar.GAP.Globals.DerivedSubgroup(G))[1]
+prepare!(G)
+terms = [(1, [h], [h], [[1],[1]])]
+println(class_order(G, 2, terms))
+
+# output
+
+2
+```
+"""
 function prepare!(G)
     bcclass_init!()
     nb = GAP.Globals.BCBuild(G)
@@ -95,6 +124,13 @@ function prepare!(G)
     return nb
 end
 
+"""
+    BlockMaps(d, n, gens, col, Qm, moduli)
+
+Store a block presentation and its quotient map.
+
+The arguments are cyclic orders `d`, dimension `n`, character multisets `gens`, their index dictionary `col`, the integer quotient matrix `Qm`, and Smith `moduli`. Returns a `BlockMaps`. Prefer `block_maps` to compute consistent fields. A zero modulus denotes a free coordinate and row i of `Qm` is the image of generator i.
+"""
 struct BlockMaps
     d::Vector{Int}
     n::Int
@@ -106,6 +142,13 @@ end
 
 reduce_coords(bm::BlockMaps, v) = [bm.moduli[j] == 0 ? v[j] : mod(v[j], bm.moduli[j]) for j in eachindex(v)]
 
+"""
+    block_maps(d, perms, n)
+
+Compute a block quotient map in Smith coordinates.
+
+The argument `d::Vector{Int}` contains cyclic orders. The vector `perms::Vector{Vector{Int}}` contains permutations of character indices and `n::Int` is the dimension. Returns a `BlockMaps` and checks that every relation maps to zero. Character indices use the internal `CharCtx` encoding with index one for zero.
+"""
 function block_maps(d::Vector{Int}, perms::Vector{Vector{Int}}, n::Int)
     ctx = CharCtx(d)
     gens = [ms for ms in multisets(ctx.m, n) if generates_all(ctx, ms)]
@@ -139,7 +182,30 @@ end
 const _bm_cache = Dict{Any,BlockMaps}()
 
 
-"""Image of the symbol in its block: returns (block index b, pair index p, coordinates vector)."""
+"""
+    symbol_image(G, n, hgens, ygens, betas; cache)
+
+Evaluate one symbol using the prepared GAP data.
+
+The arguments are a prepared raw GAP group `G`, dimension `n::Int`, GAP element lists `hgens` and `ygens`, and `betas::Vector{Vector{Int}}`. The optional cache stores block maps. Returns `(b, p, coords, maps, key)` with subgroup and pair indices, reduced Smith coordinates, a `BlockMaps` and the padded sorted character-index multiset. Use `prepare!` first. The subgroup located from `ygens` includes H.
+
+# Examples
+
+```jldoctest
+G = gapobj(symmetric_group(3))
+h = Oscar.GAP.Globals.GeneratorsOfGroup(Oscar.GAP.Globals.DerivedSubgroup(G))[1]
+prepare!(G)
+terms = [(1, [h], [h], [[1],[1]])]
+b, p, coords, maps, key = symbol_image(G, 2, [h], [h], [[1],[1]])
+println(length((b, p, coords, maps, key)))
+println(any(!iszero, coords))
+
+# output
+
+5
+true
+```
+"""
 function symbol_image(G, n::Int, hgens, ygens, betas::Vector{Vector{Int}}; cache=_bm_cache)
     bcclass_init!()
     hg = GAP.GapObj(collect(hgens))
@@ -179,7 +245,30 @@ function symbol_image(G, n::Int, hgens, ygens, betas::Vector{Vector{Int}}; cache
     return b, p, reduce_coords(bm, bm.Qm[bm.col[key], :]), bm, key
 end
 
-"""Sum of `terms` = [(coef, hgens, ygens, betas), ...] in BC_n(G): Dict (b,p) => coordinates."""
+"""
+    class_coords(G, n, terms)
+
+Evaluate an integer combination in the prepared group.
+
+Pass a prepared raw GAP group `G`, dimension `n::Int`, and `terms` containing `(coef, hgens, ygens, betas)` tuples with GAP elements. Returns `(coordinates, moduli)`, two dictionaries indexed by `(b,p)`. Zero components are retained. A zero modulus denotes a free coordinate. Use `prepare!` before evaluating a new group.
+
+# Examples
+
+```jldoctest
+G = gapobj(symmetric_group(3))
+h = Oscar.GAP.Globals.GeneratorsOfGroup(Oscar.GAP.Globals.DerivedSubgroup(G))[1]
+prepare!(G)
+terms = [(1, [h], [h], [[1],[1]])]
+coords, moduli = class_coords(G, 2, terms)
+println(length(coords))
+println(all(k -> length(coords[k]) == length(moduli[k]), keys(coords)))
+
+# output
+
+1
+true
+```
+"""
 function class_coords(G, n::Int, terms)
     acc = Dict{Tuple{Int,Int},Vector{Int}}()
     mods = Dict{Tuple{Int,Int},Vector{Int}}()
@@ -197,9 +286,54 @@ function class_coords(G, n::Int, terms)
     return out, mods
 end
 
+"""
+    class_is_zero(G, n, terms)
+
+Test whether a low level formal class vanishes.
+
+The arguments have the same meaning as in `class_coords`. Returns a boolean after reducing every component. Use a raw GAP group and call `prepare!` first.
+
+# Examples
+
+```jldoctest
+G = gapobj(symmetric_group(3))
+h = Oscar.GAP.Globals.GeneratorsOfGroup(Oscar.GAP.Globals.DerivedSubgroup(G))[1]
+prepare!(G)
+terms = [(1, [h], [h], [[1],[1]])]
+println(class_is_zero(G, 2, terms))
+println(class_is_zero(G, 2, vcat(terms, terms)))
+
+# output
+
+false
+true
+```
+"""
 class_is_zero(G, n, terms) = all(all(x -> x == 0, v) for v in values(first(class_coords(G, n, terms))))
 
-"""Order of the element (nothing if infinite order)."""
+"""
+    class_order(G, n, terms)
+
+Compute the order of a low level formal class.
+
+The arguments have the same meaning as in `class_coords`. Returns a positive integer, one for zero, or `nothing` for infinite order. Use a raw GAP group and call `prepare!` first.
+
+Order of the element (nothing if infinite order).
+
+# Examples
+
+```jldoctest
+G = gapobj(symmetric_group(3))
+h = Oscar.GAP.Globals.GeneratorsOfGroup(Oscar.GAP.Globals.DerivedSubgroup(G))[1]
+prepare!(G)
+terms = [(1, [h], [h], [[1],[1]])]
+println(class_order(G, 2, terms))
+
+# output
+
+2
+```
+"""
 function class_order(G, n, terms)
     out, mods = class_coords(G, n, terms)
     ord = 1

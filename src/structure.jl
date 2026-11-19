@@ -32,14 +32,33 @@ struct BCStruct
     gap_seconds::Float64
 end
 
+"""
+    npairs(st)
+
+Count the subgroup pair blocks in a structure.
+
+The argument `st` is returned by `bc_structure`. Returns an integer counting its pairs.
+"""
 npairs(st::BCStruct) = sum(length(h.pairs) for h in st.hclasses)
 
-"""The underlying GAP group of an OSCAR group (or a raw GAP group, passed through)."""
+"""
+    gapobj(G)
+
+Return the GAP object underlying a group.
+
+The argument `G` is an OSCAR group or a raw GAP group. Raw GAP objects are returned unchanged.
+
+The underlying GAP group of an OSCAR group (or a raw GAP group, passed through).
+"""
 gapobj(G::GAP.GapObj) = G
 gapobj(G) = GAP.GapObj(G)
 
 """
     bc_structure_gap(G; name="G")
+
+Compute the block structure through GAP.
+
+The argument `G` is a finite OSCAR or GAP group and `name` labels the result. Returns a `BCStruct` for use with `bc`.
 
 Compute classes [H,Y] using the retained GAP implementation. Accept OSCAR
 permutation, polycyclic and matrix groups, or a raw GAP group.
@@ -137,6 +156,10 @@ end
 """
     bc_structure(G; name="G")
 
+Compute the group data needed for the block decomposition.
+
+The argument `G` is a finite OSCAR or GAP group and `name` labels the result. Returns a `BCStruct`, reusable for different dimensions.
+
 Compute the group theoretic data for Theorem 5.2 using OSCAR groups and elements.
 Accept permutation, polycyclic and matrix groups. Raw GAP groups use the retained
 `bc_structure_gap` route. GAP provides subgroup intervals, subgroup orbits,
@@ -147,6 +170,17 @@ H <= Y <= C_G(H). For stabilizer generators g, matrix row j is defined by
 h_j^g = prod_i h_i^M[j][i], with x^g = inv(g)*x*g. Identity matrices are omitted.
 Y descriptions are "order N" when |Y| > 2000. The legacy `gap_seconds` field
 records elapsed structure computation time, including the OSCAR operations.
+
+# Examples
+
+```jldoctest
+st = bc_structure(symmetric_group(4))
+println(bc(st, 2).total)
+
+# output
+
+(Z/2)^3
+```
 """
 function bc_structure(G; name::AbstractString="G")
     G isa GAP.GapObj && return bc_structure_gap(G; name)
@@ -169,7 +203,28 @@ function Base.show(io::IO, r::BCResult)
     print(io, "BC_$(r.n)($(r.name)) = ", r.total)
 end
 
-"""BC_n(G) via Theorem 5.2 from a precomputed `bc_structure`."""
+"""
+    bc(G, n; name="G", kwargs...)
+    bc(st, n; extra_vanishing=false, cache=Dict{Any,AbGroup}())
+
+Compute the combinatorial Burnside group BC_n(G).
+
+Pass a finite group `G` or a structure `st` and a positive integer dimension `n`. Returns a `BCResult` with the abelian group in `total`, the block contributions in `summands`, elapsed `seconds` and `npairs`. The optional `cache` stores block groups. The default `extra_vanishing=false` uses the defining relations. Setting it to true adds the zero-sum vanishing relations implemented by the engine.
+
+BC_n(G) via Theorem 5.2 from a precomputed `bc_structure`.
+
+# Examples
+
+```jldoctest
+println(bc(symmetric_group(4), 2).total)
+println(bc(dihedral_group(PermGroup, 14), 3).total)
+
+# output
+
+(Z/2)^3
+Z/2
+```
+"""
 function bc(st::BCStruct, n::Int; extra_vanishing::Bool=false, cache=Dict{Any,AbGroup}())
     t0 = time()
     total = AbGroup()

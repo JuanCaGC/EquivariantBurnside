@@ -33,6 +33,13 @@ export NonzeroCertificate, certificate_nonzero, verify, verify_with_group, write
 const GAPFILE = joinpath(@__DIR__, "..", "gap", "bc_structure.g")
 const _gap_loaded = Ref(false)
 
+"""
+    load_gap!()
+
+Load the GAP structure engine once.
+
+Takes no arguments and returns `nothing`. Repeated calls reuse the loaded engine.
+"""
 function load_gap!()
     if !_gap_loaded[]
         GAP.evalstr("Read(\"$(GAPFILE)\");")

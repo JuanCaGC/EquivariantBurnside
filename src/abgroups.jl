@@ -2,7 +2,17 @@
 # Finitely generated abelian groups, in the paper's (primary) notation
 # ---------------------------------------------------------------------------
 
-"""Z^free x prod (Z/q)^mult   with q running over prime powers."""
+"""
+    AbGroup(free, invariants)
+    AbGroup(free, pp)
+    AbGroup()
+
+Represent a finitely generated abelian group.
+
+The integer `free` is the free rank. The vector `invariants` contains torsion invariant factors greater than one. Alternatively `pp` maps prime powers to multiplicities. Returns an `AbGroup` with fields `free` and `pp`. The empty constructor gives the zero group.
+
+Z^free x prod (Z/q)^mult   with q running over prime powers.
+"""
 struct AbGroup
     free::Int
     pp::Dict{Int,Int}          # prime power q => multiplicity
@@ -71,6 +81,13 @@ function invariant_factors(a::AbGroup)
     return sort(inv)
 end
 
+"""
+    format_ab(a; sep=" × ")
+
+Format an abelian group as a product of prime-power factors.
+
+The argument `a` is an `AbGroup`. The keyword `sep` separates factors. Returns a string, using `"0"` for the trivial group.
+"""
 function format_ab(a::AbGroup; sep=" × ")
     iszero(a) && return "0"
     parts = String[]
@@ -89,7 +106,15 @@ end
 
 Base.show(io::IO, a::AbGroup) = print(io, format_ab(a))
 
-"""Parse the paper's notation, e.g. ab("(Z/2)^6 x Z/4"), ab("Z^13 x (Z/2)^7"), ab("0")."""
+"""
+    ab(s)
+
+Parse an abelian group in the notation used by the tables.
+
+The string argument `s` may be `"0"`, `"Z^13 x (Z/2)^7"` or `"(Z/2)^6 x Z/4"`. Returns an `AbGroup`.
+
+Parse the paper's notation, e.g. ab("(Z/2)^6 x Z/4"), ab("Z^13 x (Z/2)^7"), ab("0").
+"""
 function ab(s::AbstractString)
     s = strip(s)
     (s == "0" || s == "") && return AbGroup()

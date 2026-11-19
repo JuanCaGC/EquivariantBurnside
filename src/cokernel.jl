@@ -6,7 +6,11 @@
 const Row = Dict{Int,Int}
 
 """
-    certify_snf(rows::Vector{Row}, ncols::Int) -> (A, U, V, D)
+    certify_snf(rows, ncols)
+
+Produce an exact Smith normal form certificate.
+
+The argument `rows` is a vector of `Dict{Int,Int}` sparse rows with 1-based column indices and `ncols` is a nonnegative column count. Returns integer matrices `(A, U, V, D)` satisfying `U*A*V == D`.
 
 Build the original integer relation matrix (one row per input relation, including
 zero rows) and return a Smith certificate: `U*A*V == D`, with square unimodular
@@ -20,6 +24,19 @@ If its rank is r, the row cokernel has free rank `ncols-r`, diagonal entries
 of absolute value > 1 give the cyclic torsion factors. Call before passing rows
 to `cokernel_group`, which mutates its input. Use `show(stdout, "text/plain", A)`
 (and similarly U, V, D) to display the returned certificate.
+
+# Examples
+
+```jldoctest
+A, U, V, D = certify_snf([Dict(1 => 2), Dict(2 => 2)], 2)
+println(U * A * V == D)
+println((D[1,1], D[2,2]))
+
+# output
+
+true
+(2, 2)
+```
 """
 function certify_snf(rows::Vector{Row}, ncols::Int)
     ncols >= 0 || throw(ArgumentError("ncols must be nonnegative"))

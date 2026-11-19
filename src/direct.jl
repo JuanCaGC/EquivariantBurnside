@@ -13,8 +13,24 @@ struct DSub
 end
 
 """
+    bc_direct(G, n)
+
+Compute BC_n(G) from the defining presentation.
+
+The arguments are a finite OSCAR or GAP group `G` and a positive integer `n`. Returns `(group, statistics)` with an `AbGroup` and counts `ngens`, `nrels`, and residual matrix size `dense`. This small-group validation route includes the Theta_2 term and does not use Theorem 5.2.
+
 BC_n(G) straight from the definition (generators (H,Y,beta), relations (O),(C),(V),(B2)
 with the Theta_2 term).  Intended for |G| up to a few hundred.
+
+# Examples
+
+```jldoctest
+println(first(bc_direct(symmetric_group(3), 2)))
+
+# output
+
+Z/2
+```
 """
 function bc_direct(G, n::Int)
     load_gap!()

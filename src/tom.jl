@@ -1,3 +1,10 @@
+"""
+    bc_structure_tom(n)
+
+Compute the structure of S_n using its table of marks.
+
+The integer argument `n` is the degree of the symmetric group, not the Burnside dimension. Returns a `BCStruct`. Requires an available GAP TomLib table and raises a GAP error if it is unavailable.
+"""
 function bc_structure_tom(n::Integer)
     load_gap!()
     GAP.Globals.Read(GAP.GapObj(joinpath(@__DIR__, "..", "gap", "bc_structure_tom.g")))

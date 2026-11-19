@@ -12,10 +12,26 @@
 include(joinpath("..", "verifier", "verify_nonzero.jl"))
 
 """
-    group_fingerprint(G) -> String
+    group_fingerprint(G)
 
-SHA-256 (hex) of `"EB-GROUP-1\\n" * order * "\\n" * join(GAP strings of GeneratorsOfGroup, "\\n")`.
-It binds a certificate to the given generating tuple of G, NOT to the isomorphism type of G.
+Fingerprint a group with its chosen generating tuple.
+
+The argument `G` is an OSCAR or GAP group. Returns a 64-character hexadecimal string.
+
+`group_fingerprint(G)` is the SHA-256 hex of the text "EB-GROUP-1\\n" * order * "\\n" * the GAP strings of `GeneratorsOfGroup(G)` joined by newlines. It binds a certificate to the given generating tuple and NOT to the isomorphism type.
+
+# Examples
+
+```jldoctest
+G = symmetric_group(3)
+println(length(group_fingerprint(G)))
+println(group_fingerprint(G) == group_fingerprint(gapobj(G)))
+
+# output
+
+64
+true
+```
 """
 function group_fingerprint(G)
     Gg = gapobj(G)
@@ -27,8 +43,31 @@ end
 """
     NonzeroCertificate
 
+Store a functional witnessing a nonzero block vector.
+
+Obtain this return type from `certificate_nonzero(x)`. Its fields record the group order and fingerprint, dimension, block descriptions and orders, character permutations and multisets, functional `f`, class coefficients and generator strings. The integer `modulus` is zero for a functional valued in Z. The `symbols` field is an audit trail, not a checked derivation. Prefer the factory and file reader to direct field construction.
+
 A certificate that an element of BC_n(G) is nonzero. Build it with `certificate_nonzero`, check it with
 `verify` and `verify_with_group`, store it with `write_certificate` and `read_certificate`.
+
+What a non-vanishing certificate does and does not prove. `verify` checks, in plain integer arithmetic and without Oscar, that the stated functional f kills every relation of B_n(H)/(C) regenerated from d, n and the stated permutations of characters, and that f of the class vector is nonzero. If it returns true the class vector is nonzero in B_n(H)/(C) for those data. It does NOT check that the permutations are the stabilizer action of the group, nor that the symbols map to the class vector. `verify_with_group` rebuilds the group from the certificate and re-derives the block data and the permutations through different OSCAR calls than the engine, but it does not recompute the class vector from the symbols.
+
+# Examples
+
+```jldoctest
+S3 = symmetric_group(3)
+c3 = cperm(S3, [1,2,3])
+s = BCSymbol(S3, [c3], [c3], [[1],[1]])
+x = bc_image(s, 2)
+cert = certificate_nonzero(x)
+println(cert isa NonzeroCertificate)
+println(cert.modulus)
+
+# output
+
+true
+2
+```
 """
 struct NonzeroCertificate
     group_order::Int
@@ -59,10 +98,29 @@ function Base.show(io::IO, c::NonzeroCertificate)
 end
 
 """
-    certificate_nonzero(x::BCElement) -> NonzeroCertificate
+    certificate_nonzero(x::BCElement)
+
+Construct a non-vanishing certificate for an evaluated class.
+
+The argument `x` must be a nonzero `BCElement`. Returns a `NonzeroCertificate`, selecting the first sorted nonzero block and its first nonzero Smith coordinate. Throws `ArgumentError` for zero.
 
 Certificate that `x` is nonzero, built from the first block (in sorted order) and the first coordinate
 that is nonzero. Throws `ArgumentError` if `x` is zero.
+
+# Examples
+
+```jldoctest
+S3 = symmetric_group(3)
+c3 = cperm(S3, [1,2,3])
+s = BCSymbol(S3, [c3], [c3], [[1],[1]])
+x = bc_image(s, 2)
+cert = certificate_nonzero(x)
+println(verify(cert))
+
+# output
+
+true
+```
 """
 function certificate_nonzero(x::BCElement)
     is_zero(x) && throw(ArgumentError("element is zero: no certificate of non-vanishing exists"))
@@ -106,7 +164,35 @@ function _cert_lines(c::NonzeroCertificate)
     return L
 end
 
-"""Write the certificate as plain text (format EBNZCERT 1)."""
+"""
+    write_certificate(path, cert)
+
+Write a certificate in the plain text EBNZCERT 1 format.
+
+The arguments are a file path `path::AbstractString` and a `NonzeroCertificate` named `cert`. Creates or overwrites the file and returns `path`.
+
+Write the certificate as plain text (format EBNZCERT 1).
+
+# Examples
+
+```jldoctest
+S3 = symmetric_group(3)
+c3 = cperm(S3, [1,2,3])
+s = BCSymbol(S3, [c3], [c3], [[1],[1]])
+x = bc_image(s, 2)
+cert = certificate_nonzero(x)
+mktempdir() do dir
+    path = joinpath(dir, "point.cert")
+    println(write_certificate(path, cert) == path)
+    println(verify(path))
+end
+
+# output
+
+true
+true
+```
+"""
 function write_certificate(path::AbstractString, c::NonzeroCertificate)
     open(path, "w") do io
         for l in _cert_lines(c)
@@ -118,7 +204,34 @@ end
 
 _rest(l, key) = length(l) > length(key) ? String(l[length(key)+2:end]) : ""
 
-"""Read a certificate written by `write_certificate`. Throws `ArgumentError` on a malformed file."""
+"""
+    read_certificate(path)
+
+Read a certificate from the EBNZCERT 1 format.
+
+The argument `path::AbstractString` names an existing file. Returns a `NonzeroCertificate`. Throws `ArgumentError` for malformed content. Reading does not verify the certificate.
+
+Read a certificate written by `write_certificate`. Throws `ArgumentError` on a malformed file.
+
+# Examples
+
+```jldoctest
+S3 = symmetric_group(3)
+c3 = cperm(S3, [1,2,3])
+s = BCSymbol(S3, [c3], [c3], [[1],[1]])
+x = bc_image(s, 2)
+cert = certificate_nonzero(x)
+mktempdir() do dir
+    path = joinpath(dir, "point.cert")
+    write_certificate(path, cert)
+    println(read_certificate(path) == cert)
+end
+
+# output
+
+true
+```
+"""
 function read_certificate(path::AbstractString)
     lines = readlines(path)
     (!isempty(lines) && strip(lines[1]) == "EBNZCERT 1") || throw(ArgumentError("not a certificate of format EBNZCERT 1"))
@@ -145,19 +258,47 @@ end
 # ----------------------------------------------------------------------------- verifiers
 
 """
-    verify(cert) -> Bool
+    verify(cert)
+    verify(path)
+
+Check the integer non-vanishing witness.
+
+Pass a `NonzeroCertificate` or a file path. Returns a boolean from the standalone verifier. The path form reads plain text directly without the package parser.
+
+verify(cert) -> Bool
     verify(path) -> Bool
 
 Run the standalone verifier of `verifier/verify_nonzero.jl` on the certificate (or on a certificate file,
 read as plain text without the parser of this package). `true` means the class vector is nonzero in
 B_n(H)/(C) for the stated d, n and character permutations. It does not check that those permutations are
 the stabilizer action of a group, see `verify_with_group`.
+
+What a non-vanishing certificate does and does not prove. `verify` checks, in plain integer arithmetic and without Oscar, that the stated functional f kills every relation of B_n(H)/(C) regenerated from d, n and the stated permutations of characters, and that f of the class vector is nonzero. If it returns true the class vector is nonzero in B_n(H)/(C) for those data. It does NOT check that the permutations are the stabilizer action of the group, nor that the symbols map to the class vector. `verify_with_group` rebuilds the group from the certificate and re-derives the block data and the permutations through different OSCAR calls than the engine, but it does not recompute the class vector from the symbols.
+
+# Examples
+
+```jldoctest
+S3 = symmetric_group(3)
+c3 = cperm(S3, [1,2,3])
+s = BCSymbol(S3, [c3], [c3], [[1],[1]])
+x = bc_image(s, 2)
+cert = certificate_nonzero(x)
+println(verify(cert))
+
+# output
+
+true
+```
 """
 verify(c::NonzeroCertificate) = first(NZVerifier.check(_cert_lines(c)))
 verify(path::AbstractString) = first(NZVerifier.check(readlines(path)))
 
 """
-    verify_with_group(cert) -> Bool
+    verify_with_group(cert)
+
+Check the group and block data of a certificate through OSCAR.
+
+The argument `cert` is a `NonzeroCertificate`. Returns a boolean comparing the rebuilt block action with the recorded action. This is a group-data check, use `verify(cert)` as well for the integer witness. Throws `ArgumentError` if group generator strings are absent. Only use trusted certificate generator strings, which are evaluated as GAP expressions.
 
 Rebuild G from the generator lines of the certificate, check its order and fingerprint, rebuild the block
 representative H and Y~, check the orders, descriptions, |Y~| and orbit size, and recompute the action of
@@ -165,6 +306,23 @@ N_G(H) n N_G(Y~) on the characters of H through OSCAR (an intersection of two no
 route from the GAP code of the engine). Returns `true` when the generated permutation group equals the one
 of the certificate. It does not recompute the class vector from the symbols. Throws `ArgumentError` when
 the certificate has no generators of G (groups whose elements cannot be written as plain GAP data).
+
+What a non-vanishing certificate does and does not prove. `verify` checks, in plain integer arithmetic and without Oscar, that the stated functional f kills every relation of B_n(H)/(C) regenerated from d, n and the stated permutations of characters, and that f of the class vector is nonzero. If it returns true the class vector is nonzero in B_n(H)/(C) for those data. It does NOT check that the permutations are the stabilizer action of the group, nor that the symbols map to the class vector. `verify_with_group` rebuilds the group from the certificate and re-derives the block data and the permutations through different OSCAR calls than the engine, but it does not recompute the class vector from the symbols.
+
+# Examples
+
+```jldoctest
+S3 = symmetric_group(3)
+c3 = cperm(S3, [1,2,3])
+s = BCSymbol(S3, [c3], [c3], [[1],[1]])
+x = bc_image(s, 2)
+cert = certificate_nonzero(x)
+println(verify_with_group(cert))
+
+# output
+
+true
+```
 """
 function verify_with_group(c::NonzeroCertificate)
     isempty(c.ggens) && throw(ArgumentError("the certificate has no group generators, cannot rebuild the group"))

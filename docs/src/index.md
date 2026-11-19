@@ -24,3 +24,7 @@ Phase 0 is a reorganization of existing code. What the package computes today:
 Not implemented yet: the class of an action on a projective space or a toric variety, the Kresch-Tschinkel recursion, and anything for general varieties. The function field part of a symbol is not recorded or computed.
 
 The test suite records one documented basis discrepancy of the DCP data as a broken test instead of hiding it.
+
+Phase 0 and 1 compute BC_n(G) and images of classes, not classes of varieties.
+
+See the [API reference](api.md), [conventions](conventions.md) and [performance baseline](benchmarks.md).
