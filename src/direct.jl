@@ -12,27 +12,7 @@ struct DSub
     eltset::BitSet
 end
 
-"""
-    bc_direct(G, n)
-
-Compute BC_n(G) from the defining presentation.
-
-The arguments are a finite OSCAR or GAP group `G` and a positive integer `n`. Returns `(group, statistics)` with an `AbGroup` and counts `ngens`, `nrels`, and residual matrix size `dense`. This small-group validation route includes the Theta_2 term and does not use Theorem 5.2.
-
-BC_n(G) straight from the definition (generators (H,Y,beta), relations (O),(C),(V),(B2)
-with the Theta_2 term).  Intended for |G| up to a few hundred.
-
-# Examples
-
-```jldoctest
-println(first(bc_direct(symmetric_group(3), 2)))
-
-# output
-
-Z/2
-```
-"""
-function bc_direct(G, n::Int)
+function _direct_presentation(G, n::Int)
     load_gap!()
     raw = GAP.gap_to_julia(GAP.Globals.BCDirectData(gapobj(G)); recursive=true)
     subs = [DSub(Int.(s[:elts]), Int.(s[:gens]), Int.(s[:d]),
@@ -83,14 +63,15 @@ function bc_direct(G, n::Int)
     order_of_gen(t::DSub, gj) = t.d[findfirst(==(gj), t.gens)]
 
     rows = Row[]
-    function addrow!(terms...)
+    kinds = Symbol[]
+    function addrow!(kind::Symbol, terms...)
         row = Row()
         for (key, coef) in terms
             c = col[key]
             v = get(row, c, 0) + coef
             v == 0 ? delete!(row, c) : (row[c] = v)
         end
-        isempty(row) || push!(rows, row)
+        isempty(row) || (push!(rows, row); push!(kinds, kind))
     end
     skey(i, y, β) = (i, y, sort(β))
 
@@ -99,17 +80,18 @@ function bc_direct(G, n::Int)
         r = length(β)
         # (V)
         vanishes = any(ctx.add[β[a], β[b]] == 1 for a in 1:r-1 for b in a+1:r)
-        vanishes && addrow!(((i, y, β), 1))
+        vanishes && addrow!(:V, ((i, y, β), 1))
         # (B2)
         for a in 1:r-1, b in a+1:r
             ba, bb = β[a], β[b]
             if ba == bb
                 β0 = β[[t for t in 1:r if t != b]]
-                addrow!(((i, y, β), 1), (skey(i, y, β0), -1))
+                addrow!(:B_equal, ((i, y, β), 1), (skey(i, y, β0), -1))
             else
                 β1 = copy(β); β1[a] = ctx.add[ba, ctx.neg[bb]]
                 β2 = copy(β); β2[b] = ctx.add[bb, ctx.neg[ba]]
                 terms = Any[((i, y, β), 1), (skey(i, y, β1), -1), (skey(i, y, β2), -1)]
+                has_theta2 = false
                 δ = ctx.add[ba, ctx.neg[bb]]             # b1 - b2 ; generates <b1-b2>
                 sub = Set{Int}([1]); x = 1
                 while true
@@ -123,8 +105,9 @@ function bc_direct(G, n::Int)
                     id = collect(1:maximum(s.elts))      # restriction: positions map to themselves
                     βbar = [encode(ct, transport(i, k, ctx.chars[bx], id)) for bx in β]
                     push!(terms, (skey(k, y, βbar), -1))
+                    has_theta2 = true
                 end
-                addrow!(terms...)
+                addrow!(has_theta2 ? :B_distinct_theta2 : :B_distinct, terms...)
             end
         end
         # (C): generate by the generators of G
@@ -133,10 +116,38 @@ function bc_direct(G, n::Int)
             Yp = allidx[sort([cv[p] for p in allsubs[y]])]
             # beta^a on H' = aHa^-1:  (beta^a)(x) = beta(a^-1 x a) -> position map cinv[a]
             βa = [encode(CharCtx(subs[k].d), transport(i, k, ctx.chars[bx], cinv[ai])) for bx in β]
-            addrow!(((i, y, β), 1), (skey(k, Yp, βa), -1))
+            addrow!(:C, ((i, y, β), 1), (skey(k, Yp, βa), -1))
         end
     end
-    G0, sz = cokernel_group(rows, length(col))
-    return G0, (ngens=length(col), nrels=length(rows), dense=sz)
+    return (rows = rows, kinds = kinds, col = col, subs = subs, allsubs = allsubs, ys_of = ys_of)
+end
+
+# Presentation of BC_n(G) from the definition: generator keys (i, y, beta) with i the index of the abelian
+# subgroup H in `subs`, y the index of the preimage Y~ in `allsubs` and beta a sorted list of nonzero
+# character indices of H, and relation rows tagged by kind (:V, :B_equal, :B_distinct, :B_distinct_theta2, :C).
+"""
+    bc_direct(G, n)
+
+Compute BC_n(G) from the defining presentation.
+
+The arguments are a finite OSCAR or GAP group `G` and a positive integer `n`. Returns `(group, statistics)` with an `AbGroup` and counts `ngens`, `nrels`, and residual matrix size `dense`. This small-group validation route includes the Theta_2 term and does not use Theorem 5.2.
+
+BC_n(G) straight from the definition (generators (H,Y,beta), relations (O),(C),(V),(B2)
+with the Theta_2 term).  Intended for |G| up to a few hundred.
+
+# Examples
+
+```jldoctest
+println(first(bc_direct(symmetric_group(3), 2)))
+
+# output
+
+Z/2
+```
+"""
+function bc_direct(G, n::Int)
+    P = _direct_presentation(G, n)
+    G0, sz = cokernel_group(P.rows, length(P.col))
+    return G0, (ngens=length(P.col), nrels=length(P.rows), dense=sz)
 end
 

@@ -37,4 +37,7 @@ using Test
     @testset "transport and automorphisms" begin
         include("test_transport.jl")
     end
+    @testset "audit of the engine against the definition" begin
+        include("test_audit_theta2.jl")
+    end
 end
