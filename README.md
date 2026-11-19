@@ -26,6 +26,8 @@ Run the tests with `Pkg.test()` in the Julia session. The original command line 
 - `bc_structure(G)` computes subgroup and stabilizer data through OSCAR. `bc_structure_gap(G)` retains the GAP oracle. Both accept OSCAR permutation, polycyclic and matrix groups, plus raw GAP groups.
 - `bc` computes BC_n(G) by Theorem 5.2. `bc_direct` keeps the independent computation from the definition. `bc_structure_tom(n)` builds the structure for S_n from Table of Marks data. `certify_snf` returns exact Smith normal form certificates.
 - The image in BC_n(G) of a class given as a sum of symbols, through `prepare!`, `symbol_image`, `class_coords`, `class_is_zero` and `class_order`.
+- A checked front end for the same computation: `BCSymbol(G, hgens, ygens, betas)` (the quotient convention `Y <= Z_G(H)/H` of the papers) or `BCSymbol_preimage` (the convention `H <= Y <= Z_G(H)`), `BCClass(G, n)` for integer combinations, `bc_image` for the image in BC_n(G), and `is_zero`, `order`, `+`, `-` on the result. Invalid input raises an `ArgumentError` with a message that names the problem.
+- Certificates of non-vanishing: `certificate_nonzero` builds a plain text certificate, `verify` checks it with the standalone file `verifier/verify_nonzero.jl` (pure Julia, no packages), and `verify_with_group` rebuilds the group from the certificate and re-derives the block data through OSCAR. What is not certified: that the symbols map to the class vector, which is trusted engine code.
 - Arrangement and chain calculations under `EquivariantBurnside.DCP`.
 
 ## Scope

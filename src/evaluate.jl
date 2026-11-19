@@ -76,6 +76,9 @@ function tracked_elimination(rows::Vector{Row}, ncols::Int)
 end
 
 const _loaded = Ref(false)
+# The group whose block data is currently stored in the GAP global BCB, and the lazily built table of block names.
+const _prepared = Ref{Any}(nothing)
+const _block_table = Ref{Any}(nothing)
 function bcclass_init!()
     _loaded[] && return
     load_gap!()
@@ -86,7 +89,10 @@ end
 """Build the block data (GAP side) for G.  Must be called before `symbol_image` for a new group."""
 function prepare!(G)
     bcclass_init!()
-    GAP.Globals.BCBuild(G)
+    nb = GAP.Globals.BCBuild(G)
+    _prepared[] = G
+    _block_table[] = nothing
+    return nb
 end
 
 struct BlockMaps

@@ -22,4 +22,10 @@ using Test
     @testset "tom" begin
         include("test_tom.jl")
     end
+    @testset "symbols core" begin
+        include("test_symbols_core.jl")
+    end
+    @testset "symbols errors and certificates" begin
+        include("test_symbols_errors.jl")
+    end
 end

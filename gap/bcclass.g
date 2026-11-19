@@ -88,3 +88,22 @@ end;;
 BCExpsMat := function(b, conj, hgens, ords)
   return List(BCB[b].gens, g -> BCExps(hgens, ords, g^(conj^-1)));
 end;;
+
+# BCBlockInfo(b, p) returns the data that names the block (b, p) and lets a certificate
+# rebuild it: descriptions, sizes, the independent generators of the representative H and
+# generators of the representative Y (as GAP strings, evaluable for permutation and matrix groups).
+BCBlockInfo := function(b, p)
+  local blk, pr, Y, ydesc;
+  blk := BCB[b];
+  pr := blk.pairs[p];
+  Y := pr.orb[1];
+  if Size(Y) <= 2000 then ydesc := StructureDescription(Y);
+  else ydesc := Concatenation("order ", String(Size(Y))); fi;
+  return rec(d := blk.d, Hdesc := StructureDescription(blk.H), Ydesc := ydesc,
+             Hgens := List(blk.gens, String), Ygens := List(GeneratorsOfGroup(Y), String),
+             Ysize := Size(Y), orbitsize := Length(pr.orb));
+end;;
+
+BCNumBlocks := function()
+  return List(BCB, blk -> Length(blk.pairs));
+end;;
