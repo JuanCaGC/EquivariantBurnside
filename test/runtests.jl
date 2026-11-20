@@ -61,4 +61,7 @@ using Test
     @testset "correction adversarial (independent, Codex)" begin
         include("test_correction_adversarial.jl")
     end
+    @testset "toric surfaces with reflections" begin
+        include("test_toric_reflections.jl")
+    end
 end

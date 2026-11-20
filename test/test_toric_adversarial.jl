@@ -35,7 +35,7 @@ end
     for nu in ([0 1; 1 0],[1 0; 0 -1])
         fan = nu == [0 1; 1 0] ? toric_fan_hexagon() : square
         act = ToricAction([AffineTorusMap(nu,[0,0])],fan)
-        argument_error(() -> toric_class(act),"reflection")
+        argument_error(() -> toric_class(act; points = false),"reflection")
     end
 end
 

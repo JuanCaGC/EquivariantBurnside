@@ -17,13 +17,13 @@
 #  K3 Standard form. The boundary of X_Sigma is the divisor D of the rays. The action is in standard form with
 #     respect to D plus exceptional divisors over the isolated fixed points of T provided that no two rays of one
 #     G-orbit span a cone (`equivariant_refinement` achieves this by star subdivisions).
-#  K4 Restriction. We require that no element of nu(G) other than the identity has an eigenvalue 1, that is
+#  K4 Hypothesis of the first version, lifted in 2.6c for reflections by the code of `src/toric_reflections.jl`. Without reflections: no element of nu(G) other than the identity has an eigenvalue 1, that is
 #     det(nu - 1) != 0. Then every element with nu != 1 has finitely many fixed points in T, no ray and no cone is fixed
 #     by it, and the stabilizer in G of a point of the boundary is contained in A = G cap T (translations).
 #     The fixed points of T have cyclic stabilizers and tangent weights (b, -b) (the eigenvalues of a finite order
 #     element of GL_2(Z) without eigenvalue 1 are conjugate, or equal to -1 twice), so each of their point symbols vanishes
 #     by (V), and the blowup of such a point gives, by (B), the same class. They contribute nothing to the class.
-#     Actions with reflections have fixed curves and are not implemented.
+#     Actions with reflections have fixed curves, see `src/toric_reflections.jl` for their symbols.
 #  K5 Strata of the boundary and their symbols (H, Y, beta), H the pointwise stabilizer, Y~ the stabilizer of the
 #     stratum (preimage convention), beta the weights of H on the normal space:
 #       ray rho:        H = {a in A : t_a in R rho},  Y~ = {g : nu_g rho = rho},  beta = tautological character of H.
@@ -257,15 +257,22 @@ function _ray_orbit(r, nus)
 end
 
 """
-    equivariant_refinement(act::ToricAction) -> Vector{Vector{Int}}
+    equivariant_refinement(act::ToricAction; property_E = true) -> Vector{Vector{Int}}
 
-Rays of a G-invariant smooth fan in which no two rays of one G-orbit span a cone.
+Rays of a G-invariant smooth fan in which no two rays of one G-orbit span a cone, and that has the rays of the fixed curves.
 
-Starting from the rays of `act`, as long as two adjacent rays belong to one orbit of the linear parts of the
-group, the cones of that orbit are subdivided by adding the sum of the two rays (blowup of the torus fixed
-point). The result is a smooth complete fan, invariant under the group, with the property that makes the action
-on the toric surface be in standard form with respect to the boundary (see the conventions in `src/toric.jl`).
-For the projective plane with an action that permutes the coordinate lines this gives the degree 6 del Pezzo surface.
+Starting from the rays of `act`, two things are done. First, with `property_E = true`, for every curve fixed
+pointwise by an element of the group (an affine map whose linear part is a reflection) with direction `v`, the rays
+`v` and `-v` are inserted by repeated star subdivision of the cone that contains them in its interior (the
+Hirzebruch-Jung procedure). This is property (E) of Kresch-Tschinkel in dimension two: the closure of the curve then
+meets the toric boundary transversally at points of the open orbits. The set of rays that this adds is the set of
+nodes of the Stern-Brocot tree needed to reach the requested rays, so it does not depend on the order of the insertions and
+the resulting fan is invariant under the group. Second, as long as two adjacent rays belong to one orbit of the linear
+parts of the group, the cones of that orbit are subdivided by adding the sum of the two rays (blowup of the torus
+fixed point). The result is a smooth complete fan, invariant under the group, that makes the action on the toric
+surface be in standard form with respect to the boundary (see the conventions in `src/toric.jl`). For the projective
+plane with an action that permutes the coordinate lines this gives the degree 6 del Pezzo surface. Without
+reflections `property_E` changes nothing.
 
 # Examples
 
@@ -280,12 +287,20 @@ println(length(equivariant_refinement(act)))
 6
 ```
 """
-function equivariant_refinement(act::ToricAction)
+function equivariant_refinement(act::ToricAction; property_E::Bool = true)
     nus = _linear_parts(act)
     rays = copy(act.rays)
+    if property_E
+        for v in sort!(collect(_layer_directions(act)))
+            rays = _insert_ray(rays, v)
+        end
+        rayset = Set(rays)
+        for nu in nus, r in rays
+            Int.(nu * r) in rayset || error("internal error: the fan after inserting the rays of the fixed curves is not invariant")
+        end
+    end
     for _ in 1:25
         orb = Dict{Vector{Int},Set{Vector{Int}}}(r => _ray_orbit(r, nus) for r in rays)
-        new = Vector{Int}[]
         out = Vector{Int}[]
         m = length(rays)
         for i in 1:m
@@ -299,6 +314,39 @@ function equivariant_refinement(act::ToricAction)
         rays = out
     end
     error("the refinement did not stabilize")
+end
+
+# the directions v and -v of the fixed curves of the elements of the group, as primitive vectors
+function _layer_directions(act::ToricAction)
+    dirs = Set{Vector{Int}}()
+    for (g, f) in act.images
+        f.nu == _id2() && continue
+        kind = fixed_set(f)
+        kind[1] == :layers || continue
+        for l in kind[2]
+            v = [-l.m[2], l.m[1]]
+            push!(dirs, v); push!(dirs, -v)
+        end
+    end
+    return dirs
+end
+
+# insert the primitive vector v as a ray of a smooth complete fan, subdividing the cone that contains it in its interior
+function _insert_ray(rays, v)
+    v in rays && return rays
+    m = length(rays)
+    for i in 1:m
+        r, s = rays[i], rays[mod1(i + 1, m)]
+        # v = a r + b s with det(r, s) = 1
+        a = v[1] * s[2] - v[2] * s[1]
+        b = r[1] * v[2] - r[2] * v[1]
+        if a > 0 && b > 0
+            new = copy(rays)
+            insert!(new, i + 1, r .+ s)
+            return _insert_ray(new, v)
+        end
+    end
+    error("the vector $v is not in the interior of a cone of the fan")
 end
 
 # ---------------------------------------------------------------------------
@@ -332,21 +380,30 @@ function _orbits_of_rays(rays, nus)
 end
 
 """
-    toric_class(act::ToricAction; refine = true) -> BCClass
+    toric_class(act::ToricAction; refine = true, points = :auto, extra_points = []) -> BCClass
 
 The class of the action on the toric surface, as a formal sum of symbols in BC_2(G).
 
-The class is the sum, over the G-orbits of one dimensional cones and of two dimensional cones of a G-invariant
-fan in standard form, of the symbols `(H, Y, beta)` of the boundary strata: for a ray the pointwise stabilizer `H` of
-the divisor (translations along the ray) with `Y` its stabilizer in `G` and the tautological weight, for a
-two dimensional cone the group `A` of translations with the weights given by the coordinates of the translation
-in the basis of the cone. The interior fixed points contribute nothing under the hypothesis below. With
-`refine = true` the fan is first subdivided by `equivariant_refinement`, with `refine = false` the fan of `act`
-must already have the property that no two rays of one orbit span a cone. Evaluate with `bc_image`.
+The class is the sum, over the G-orbits of strata of a G-invariant model in standard form, of the symbols `(H, Y, beta)`:
+for a ray the pointwise stabilizer `H` of the divisor (translations along the ray) with `Y` its stabilizer in `G` and the
+tautological weight, for a two dimensional cone the group `A` of translations with the weights given by the coordinates of the
+translation in the basis of the cone. With `refine = true` the fan is first subdivided by `equivariant_refinement`, with
+`refine = false` the fan of `act` must already have the properties that no two rays of one orbit span a cone and that the
+directions of the fixed curves are rays. Evaluate with `bc_image`. The generic symbol of the class (trivial stabilizer)
+is not part of BC_n(G) and is omitted.
 
-Requires that no element of the group has a linear part other than the identity with eigenvalue 1, that is, no
-reflections: actions with fixed curves are not implemented and raise `ArgumentError`. The generic symbol of the
-class (trivial stabilizer) is not part of BC_n(G) and is omitted.
+When some element of the group has a reflection as linear part, the closures of its fixed curves are part of the divisor.
+Their symbols `(<h>, Stab(C), 1)` are added, together with the symbols of the blowup of each special point (interior fixed points of the
+elements without fixed direction, intersections of fixed curves, and the points of the boundary where a curve meets it or that are fixed by an
+inversion of the divisor): the exceptional curve with the scalar elements of the stabilizer as generic stabilizer, and the points of
+that curve whose stabilizer is larger. These are computed from the linear action of the stabilizer on the tangent plane. The class
+agrees, in BC_2(G), with the class printed by Kresch and Tschinkel for C_2 x S_3 acting on the del Pezzo surface of degree 6, and
+it does not depend on additional blowup centers (`extra_points`, rational points of the torus) or on the fan.
+
+`points = :auto` computes these symbols exactly when the group has reflections. With `points = true` they are computed
+in any case (without reflections their total is zero in BC_2(G)), with `points = false` the class of the boundary only is returned and a group with
+reflections raises `ArgumentError`. `extra_points` is a list of rational points `u` of the torus, with `exp(2 pi i u)` the point, to be blown up in
+addition, which must not change the image.
 
 # Examples
 
@@ -363,12 +420,13 @@ println(is_zero(x))
 false
 ```
 """
-function toric_class(act::ToricAction; refine::Bool = true)
+function toric_class(act::ToricAction; refine::Bool = true, points = :auto, extra_points = Vector{Vector{Rational{Int}}}())
     nus = _linear_parts(act)
-    for nu in nus
-        nu == _id2() && continue
-        _det2(nu - _id2()) != 0 || throw(ArgumentError(
-            "the linear part $nu has eigenvalue 1: fixed curves (reflections) are not implemented"))
+    has_reflections = any(nu -> nu != _id2() && _det2(nu - _id2()) == 0, nus)
+    points in (:auto, true, false) || throw(ArgumentError("points must be :auto, true or false"))
+    reflections = points === :auto ? has_reflections : points
+    if has_reflections && !reflections
+        throw(ArgumentError("the group has reflections (fixed curves): use points = :auto or true"))
     end
     rays = refine ? equivariant_refinement(act) : act.rays
     if !refine
@@ -377,12 +435,20 @@ function toric_class(act::ToricAction; refine::Bool = true)
             _ray_orbit(r, nus) == _ray_orbit(s, nus) && throw(ArgumentError(
                 "the rays $r and $s of one orbit span a cone: use refine = true"))
         end
+        if has_reflections
+            rs = Set(rays)
+            all(v -> v in rs, _layer_directions(act)) || throw(ArgumentError(
+                "a fixed curve has a direction that is not a ray (property (E)): use refine = true"))
+        end
     end
     G = act.G
     cls = BCClass(G, 2)
     elems = collect(keys(act.images))
     Aelems = [g for g in elems if act.images[g].nu == _id2()]
-    length(Aelems) == 1 && return cls
+    if length(Aelems) == 1
+        reflections && _reflection_symbols!(cls, act, rays, extra_points)
+        return cls
+    end
     A, _ = sub(G, Aelems)
     # divisors
     for rho in _orbits_of_rays(rays, nus)
@@ -425,5 +491,6 @@ function toric_class(act::ToricAction; refine::Bool = true)
         (all(==(0), b1) || all(==(0), b2)) && continue
         push!(cls, BCSymbol(G, agens, [], [b1, b2]))
     end
+    reflections && _reflection_symbols!(cls, act, rays, extra_points)
     return cls
 end

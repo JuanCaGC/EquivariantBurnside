@@ -64,5 +64,6 @@ include("certificates_nz.jl")
 include("transport.jl")
 include("toric.jl")
 include("toric_loci.jl")
+include("toric_reflections.jl")
 include("dcp.jl")
 end

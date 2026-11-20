@@ -86,9 +86,9 @@ end
     # a translation along a ray gives a divisor symbol only
     t1 = ToricAction([AffineTorusMap(I2, [1//5, 0])], toric_fan_P2())
     @test length(toric_class(t1).terms) >= 1
-    # reflections are refused
+    # reflections are refused when the symbols of the fixed curves are switched off (they are supported by default since 2.6c)
     refl = ToricAction([AffineTorusMap([0 1; 1 0], [0, 0])], toric_fan_P2())
-    @test throws("reflections", () -> toric_class(refl))
+    @test throws("reflections", () -> toric_class(refl; points = false))
 end
 
 @testset "2.3 and 2.4 weights against a hand computation on P^2" begin
