@@ -73,6 +73,9 @@ using Test
     @testset "projective line actions" begin
         include("test_projective_line.jl")
     end
+    @testset "indexed symbols and psi, tau, eta" begin
+        include("test_indexed.jl")
+    end
     @testset "incompressible part of the class" begin
         include("test_incompressible.jl")
     end
