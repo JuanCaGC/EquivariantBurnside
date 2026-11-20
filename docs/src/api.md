@@ -50,6 +50,10 @@ toric_fan_P2
 toric_fan_hexagon
 equivariant_refinement
 toric_class
+FixedLayer
+fixed_set
+fixed_curves
+special_points
 ```
 
 ## Certificates

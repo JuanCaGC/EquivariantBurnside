@@ -5,3 +5,6 @@ Oscar = "f1435218-dba5-11e9-1e4d-f1a5fab5fc13"
 
 [sources]
 EquivariantBurnside = {path = ".."}
+
+[compat]
+Documenter = "1"

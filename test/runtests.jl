@@ -46,4 +46,7 @@ using Test
     @testset "toric surfaces and affine actions" begin
         include("test_toric.jl")
     end
+    @testset "fixed loci of affine actions" begin
+        include("test_toric_loci.jl")
+    end
 end
