@@ -49,4 +49,16 @@ using Test
     @testset "fixed loci of affine actions" begin
         include("test_toric_loci.jl")
     end
+    @testset "toric adversarial (independent, Codex)" begin
+        include("test_toric_adversarial.jl")
+    end
+    @testset "fixed loci adversarial (independent, Codex)" begin
+        include("test_toric_loci_adversarial.jl")
+    end
+    @testset "transport adversarial (independent, Codex)" begin
+        include("test_transport_adversarial.jl")
+    end
+    @testset "correction adversarial (independent, Codex)" begin
+        include("test_correction_adversarial.jl")
+    end
 end

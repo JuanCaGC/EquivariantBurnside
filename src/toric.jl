@@ -70,6 +70,7 @@ _det2(m) = m[1, 1] * m[2, 2] - m[1, 2] * m[2, 1]
 _id2() = [1 0; 0 1]
 
 _compose(f::AffineTorusMap, g::AffineTorusMap) = AffineTorusMap(f.nu * g.nu, f.t .+ f.nu * g.t)
+Base.:*(f::AffineTorusMap, g::AffineTorusMap) = _compose(f, g)
 Base.:(==)(f::AffineTorusMap, g::AffineTorusMap) = f.nu == g.nu && f.t == g.t
 Base.hash(f::AffineTorusMap, h::UInt) = hash((f.nu, f.t), h)
 Base.show(io::IO, f::AffineTorusMap) = print(io, "AffineTorusMap(", f.nu, ", ", f.t, ")")
