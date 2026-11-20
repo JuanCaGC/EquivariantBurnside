@@ -64,4 +64,16 @@ using Test
     @testset "toric surfaces with reflections" begin
         include("test_toric_reflections.jl")
     end
+    @testset "toric reflections adversarial" begin
+        include("test_toric_reflections_adversarial.jl")
+    end
+    @testset "toric glide reflection boundary points" begin
+        include("test_toric_glide.jl")
+    end
+    @testset "projective line actions" begin
+        include("test_projective_line.jl")
+    end
+    @testset "incompressible part of the class" begin
+        include("test_incompressible.jl")
+    end
 end

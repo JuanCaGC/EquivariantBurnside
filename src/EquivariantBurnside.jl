@@ -32,6 +32,8 @@ export BCSymbol, BCSymbol_preimage, BCClass, BCElement, BlockKey, bc_image, bc_b
 export bc_transport, bc_out_automorphisms, bc_find_automorphism, bc_inequivalence_certificates
 export AffineTorusMap, ToricAction, affine_group, toric_fan_P2, toric_fan_hexagon, equivariant_refinement, toric_class
 export FixedLayer, fixed_set, fixed_curves, special_points
+export ProjAction, pgl2_conjugate, pgl2_datum, projective_line_class
+export IncSymbol, IncClass, incompressible_class, inc_transport, inc_find_automorphism
 export NonzeroCertificate, certificate_nonzero, verify, verify_with_group, write_certificate, read_certificate, group_fingerprint
 const GAPFILE = joinpath(@__DIR__, "..", "gap", "bc_structure.g")
 const _gap_loaded = Ref(false)
@@ -65,5 +67,7 @@ include("transport.jl")
 include("toric.jl")
 include("toric_loci.jl")
 include("toric_reflections.jl")
+include("projective_line.jl")
+include("incompressible.jl")
 include("dcp.jl")
 end

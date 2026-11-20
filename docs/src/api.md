@@ -56,6 +56,20 @@ fixed_curves
 special_points
 ```
 
+## Incompressible symbols and the projective line
+
+```@docs
+ProjAction
+pgl2_conjugate
+pgl2_datum
+projective_line_class
+IncSymbol
+IncClass
+incompressible_class
+inc_transport
+inc_find_automorphism
+```
+
 ## Certificates
 
 ```@docs
