@@ -43,4 +43,7 @@ using Test
     @testset "restriction correction: models and Example 7.5" begin
         include("test_phi_models.jl")
     end
+    @testset "toric surfaces and affine actions" begin
+        include("test_toric.jl")
+    end
 end

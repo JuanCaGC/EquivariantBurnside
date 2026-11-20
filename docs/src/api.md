@@ -40,6 +40,18 @@ bc_find_automorphism
 bc_inequivalence_certificates
 ```
 
+## Toric surfaces
+
+```@docs
+AffineTorusMap
+affine_group
+ToricAction
+toric_fan_P2
+toric_fan_hexagon
+equivariant_refinement
+toric_class
+```
+
 ## Certificates
 
 ```@docs
