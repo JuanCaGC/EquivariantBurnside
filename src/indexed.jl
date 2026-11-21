@@ -128,16 +128,70 @@ lift of the element of `PGL(W)`. It is a conjugation invariant of the projective
 struct FieldFactor
     dim::Int
     inv::Dict{Any,Vector{Rational{Int}}}
+    tr::Dict{Any,Any}      # the trace of the matrix of a linear lift of each element (a GAP cyclotomic), used by the twist key
+end
+FieldFactor(dim, inv) = FieldFactor(dim, inv, Dict{Any,Any}())
+
+# `FIELD_KEY_MODE` is `:ratio` (the ratios of eigenvalues of each element, the character of the adjoint representation) or `:twist`
+# (the full character of the linear lift minimized over twists by linear characters, exact conjugacy in PGL).
+const FIELD_KEY_MODE = Ref(:ratio)
+const _TWIST_CACHE = IdDict{Any,Any}()
+
+"""
+    set_field_key_mode!(mode)
+
+Choose how field factors are compared when symbols are identified: `:ratio` (the default) compares, for each element of `Y~`, the sorted
+ratios of the eigenvalues of its action (the character of the adjoint representation), and `:twist` compares the full character of
+the linear lift minimized over the twists by the linear characters of `Y~`, which is exactly conjugacy of the projective
+representations in `PGL(W)`. The `:twist` mode needs the traces stored in the factors, so it applies to classes built with
+`projective_class(rep; fields = true)`. Switching the mode clears an internal cache. Returns `mode`.
+
+Throws `ArgumentError` for another mode.
+
+# Examples
+
+```jldoctest
+println(set_field_key_mode!(:twist))
+println(set_field_key_mode!(:ratio))
+
+# output
+
+twist
+ratio
+```
+"""
+function set_field_key_mode!(mode::Symbol)
+    mode in (:ratio, :twist) || throw(ArgumentError("the mode is :ratio or :twist"))
+    empty!(_TWIST_CACHE)
+    FIELD_KEY_MODE[] = mode
+    return mode
 end
 
+
 # the factors of a symbol moved along a map of elements (`f(y)` is the new element) and restricted to the elements for which `keep` holds
-_move_field(F, f, keep = _ -> true) = Any[FieldFactor(x.dim, Dict{Any,Vector{Rational{Int}}}(f(y) => v for (y, v) in x.inv if keep(y))) for x in F]
+_move_field(F, f, keep = _ -> true) = Any[FieldFactor(x.dim, Dict{Any,Vector{Rational{Int}}}(f(y) => v for (y, v) in x.inv if keep(y)),
+                                                      Dict{Any,Any}(f(y) => v for (y, v) in x.tr if keep(y))) for x in F]
 
 # kernel of the action on a factor, as a set of elements: the elements acting as scalars, that is with all ratios trivial
 _factor_kernel(x::FieldFactor) = Set(y for (y, v) in x.inv if all(iszero, v))
 
+# the traces of the lift of the factor twisted by every linear character of Y~, as strings (cached), with the list of elements
+function _twisted(x::FieldFactor)
+    get!(_TWIST_CACHE, x) do
+        Ys = collect(keys(x.tr))
+        rows = Oscar.GAP.Globals.EB_TwistStrings(Oscar.GAP.GapObj([y.X for y in Ys]), Oscar.GAP.GapObj([x.tr[y] for y in Ys]))
+        (Ys, [[String(s) for s in row] for row in rows])
+    end
+end
+
 function _field_key(F, cj)
     isempty(F) && return ()
+    if FIELD_KEY_MODE[] == :twist
+        return Tuple(sort!([begin
+            Ys, rows = _twisted(x)
+            (x.dim, minimum(sort!(Tuple{Int,String}[(cj(y), row[i]) for (i, y) in enumerate(Ys)]) for row in rows))
+        end for x in F]))
+    end
     return Tuple(sort!([(x.dim, sort!(Tuple{Int,Vector{Rational{Int}}}[(cj(y), v) for (y, v) in x.inv])) for x in F]))
 end
 

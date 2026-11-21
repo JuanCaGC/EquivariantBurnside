@@ -121,8 +121,10 @@ function indexed_product(a::IndexedClass, b::IndexedClass)
         for (i, c) in s2.gamma
             gm[i] = ext2(c, s1.A)
         end
-        F = vcat(Any[FieldFactor(x.dim, Dict{Any,Vector{Rational{Int}}}(e1(y1) * e2(y2) => v for (y1, v) in x.inv for y2 in s2.Y)) for x in s1.F],
-                 Any[FieldFactor(x.dim, Dict{Any,Vector{Rational{Int}}}(e1(y1) * e2(y2) => v for (y2, v) in x.inv for y1 in s1.Y)) for x in s2.F])
+        F = vcat(Any[FieldFactor(x.dim, Dict{Any,Vector{Rational{Int}}}(e1(y1) * e2(y2) => v for (y1, v) in x.inv for y2 in s2.Y),
+                                 Dict{Any,Any}(e1(y1) * e2(y2) => v for (y1, v) in x.tr for y2 in s2.Y)) for x in s1.F],
+                 Any[FieldFactor(x.dim, Dict{Any,Vector{Rational{Int}}}(e1(y1) * e2(y2) => v for (y2, v) in x.inv for y1 in s1.Y),
+                                 Dict{Any,Any}(e1(y1) * e2(y2) => v for (y2, v) in x.tr for y1 in s1.Y)) for x in s2.F])
         push!(out, c1 * c2, IndexedSymbol(P, prod(s1.H, s2.H), prod(s1.A, s2.A), prod(s1.Y, s2.Y), s1.d + s2.d, beta, gm, F, Val(:raw)))
     end
     return out, P, e1, e2

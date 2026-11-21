@@ -108,6 +108,7 @@ FieldFactor
 projective_invariant
 field_fingerprint
 field_faithful
+set_field_key_mode!
 ```
 
 ## Certificates

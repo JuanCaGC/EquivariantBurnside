@@ -376,6 +376,16 @@ end
         T = Oscar.GAP.evalstr("[[1,1,0],[0,1,0],[0,0,1]]")
         A4b = GGl.Group(Oscar.GAP.GapObj([GGl.Inverse(T) * g * T for g in GGl.GeneratorsOfGroup(A4)]))
         @test field_fingerprint(projective_class(linrep(A4b); fields = true)) == field_fingerprint(cfA)
+        # the exact key (conjugacy in PGL of the actions, with the twist by linear characters) gives the same classes here
+        set_field_key_mode!(:twist)
+        cfT = projective_class(linrep(A4); fields = true)
+        @test length(cfT.terms) == length(cfA.terms) && field_fingerprint(cfT) == field_fingerprint(cfA)
+        @test field_faithful(cfT)[1]
+        repS5 = linrep(DCP.standard_symmetric(5))
+        cfS5 = projective_class(repS5; fields = true)
+        set_field_key_mode!(:ratio)
+        @test length(cfS5.terms) == length(projective_class(repS5; fields = true).terms) == 55
+        @test field_faithful(cfS5)[1]
         # omega adds a torus to the field and is refused on symbols that carry a field datum
         @test_throws ArgumentError indexed_omega(cfA, Int[])
     end

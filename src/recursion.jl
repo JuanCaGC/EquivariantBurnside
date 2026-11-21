@@ -26,6 +26,17 @@ EB_EigExps := function(M)
   od;
   return ex;
 end;
+EB_TwistStrings := function(els, trs)
+  local Y, tbl, ccl, lin, pos, res, chi;
+  Y := Group(els); tbl := CharacterTable(Y); ccl := ConjugacyClasses(tbl);
+  lin := Filtered(Irr(tbl), c -> c[1] = 1);
+  pos := List(els, y -> PositionProperty(ccl, c -> y in c));
+  res := [];
+  for chi in lin do
+    Add(res, List([1..Length(els)], i -> String(trs[i] * chi[pos[i]])));
+  od;
+  return res;
+end;
 EB_QuotMat := function(U, W, A)
   local B, v, r, s, T;
   B := ShallowCopy(U); r := Length(U);
@@ -123,7 +134,8 @@ function _generic_class(rep::LinearRepresentation; fields::Bool = false)
     eps = Dict{Any,Rational{Int}}(g => _scalar_char(rep, g) for g in rep.C)
     F = Any[]
     if fields && rep.n >= 2
-        F = Any[FieldFactor(rep.n, Dict{Any,Vector{Rational{Int}}}(g => projective_invariant(rep.mats[g]) for g in rep.els))]
+        F = Any[FieldFactor(rep.n, Dict{Any,Vector{Rational{Int}}}(g => projective_invariant(rep.mats[g]) for g in rep.els),
+                            Dict{Any,Any}(g => _GAPG.TraceMat(rep.mats[g]) for g in rep.els))]
     end
     push!(cls, IndexedSymbol(P, rep.C, rep.C, Any[g for g in Oscar.gens(P)], rep.n - 1, Dict{Any,Rational{Int}}[], Dict(0 => eps); field = F))
     return cls
@@ -194,10 +206,13 @@ function indexed_product(classes::Vector{IndexedClass})
         F = Any[]
         for (k, s) in enumerate(syms), x in s.F
             D = Dict{Any,Vector{Rational{Int}}}()
+            T = Dict{Any,Any}()
             for tup in Iterators.product((s2.Y for s2 in syms)...)
-                D[prod(embs[j](y) for (j, y) in enumerate(tup))] = x.inv[tup[k]]
+                el = prod(embs[j](y) for (j, y) in enumerate(tup))
+                D[el] = x.inv[tup[k]]
+                haskey(x.tr, tup[k]) && (T[el] = x.tr[tup[k]])
             end
-            push!(F, FieldFactor(x.dim, D))
+            push!(F, FieldFactor(x.dim, D, T))
         end
         push!(out, coef, IndexedSymbol(P, H, A, Y, sum(s.d for s in syms), beta, gm, F, Val(:raw)))
     end
