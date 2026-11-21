@@ -72,7 +72,7 @@ inc_find_automorphism
 
 ## Indexed symbols, the first part of the recursion for linear actions
 
-These are the building blocks of the recursion of Kresch and Tschinkel for the class of `P(V)` (arXiv:2108.00518, Section 8): indexed symbols and the operations `psi`, `tau`, `eta` and induction. The recursion itself is not implemented yet.
+These are the building blocks of the recursion of Kresch and Tschinkel for the class of `P(V)` (arXiv:2108.00518, Section 8): indexed symbols and the operations `psi`, `tau`, `omega`, `eta`, induction, restriction and the product. The recursion itself is not implemented yet.
 
 ```@docs
 indexed_character
@@ -84,6 +84,9 @@ indexed_tau
 indexed_reindex
 indexed_induce
 indexed_eta
+indexed_omega
+indexed_restrict
+indexed_product
 ```
 
 ## Certificates

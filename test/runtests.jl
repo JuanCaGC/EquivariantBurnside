@@ -76,6 +76,9 @@ using Test
     @testset "indexed symbols and psi, tau, eta" begin
         include("test_indexed.jl")
     end
+    @testset "indexed omega, restriction and product" begin
+        include("test_indexed_ops.jl")
+    end
     @testset "incompressible part of the class" begin
         include("test_incompressible.jl")
     end

@@ -35,7 +35,7 @@ export FixedLayer, fixed_set, fixed_curves, special_points
 export ProjAction, pgl2_conjugate, pgl2_datum, projective_line_class
 export IncSymbol, IncClass, incompressible_class, inc_transport, inc_find_automorphism
 export IndexedSymbol, IndexedClass, indexed_character, indexed_psi, indexed_tau, indexed_tau_matrix, indexed_reindex,
-    indexed_induce, indexed_eta
+    indexed_induce, indexed_eta, indexed_omega, indexed_restrict, indexed_product
 export NonzeroCertificate, certificate_nonzero, verify, verify_with_group, write_certificate, read_certificate, group_fingerprint
 const GAPFILE = joinpath(@__DIR__, "..", "gap", "bc_structure.g")
 const _gap_loaded = Ref(false)
@@ -72,5 +72,6 @@ include("toric_reflections.jl")
 include("projective_line.jl")
 include("incompressible.jl")
 include("indexed.jl")
+include("indexed_ops.jl")
 include("dcp.jl")
 end
