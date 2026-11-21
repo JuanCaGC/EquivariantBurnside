@@ -75,8 +75,26 @@ function linrep(G)
     return LinearRepresentation(G, arr, P, arr.dimension, els, mats, C)
 end
 
-# Phase 4.6. The projective invariant of a matrix of finite order: the sorted list of the ratios of its eigenvalues, as elements of
-# Q/Z. The eigenvalue exponents are found from the traces of the powers. Multiplying the matrix by a scalar does not change it.
+"""
+    projective_invariant(M)
+
+The projective invariant of a GAP matrix `M` of finite order (Phase 4.6): the sorted list of the ratios of its eigenvalues, as
+elements of `Q/Z` (a vector of `Rational{Int}` with values in `[0, 1)`).
+
+The eigenvalue exponents are found from the traces of the powers of `M`. Multiplying `M` by a scalar does not change the result,
+so it is an invariant of the image of `M` in `PGL`. It is the data stored in a `FieldFactor`.
+
+# Examples
+
+```jldoctest
+M = Oscar.GAP.evalstr("[[1,0],[0,-1]]")
+println(projective_invariant(M))
+
+# output
+
+Rational{Int64}[1//2, 1//2]
+```
+"""
 function projective_invariant(M)
     _rec_initialize!()
     ex = Rational{Int}[Int(_GAPG.NumeratorRat(x)) // Int(_GAPG.DenominatorRat(x)) for x in _GAPG.EB_EigExps(M)]
