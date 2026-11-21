@@ -79,6 +79,9 @@ using Test
     @testset "indexed omega, restriction and product" begin
         include("test_indexed_ops.jl")
     end
+    @testset "recursion for P(V)" begin
+        include("test_recursion.jl")
+    end
     @testset "incompressible part of the class" begin
         include("test_incompressible.jl")
     end

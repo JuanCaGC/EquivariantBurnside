@@ -14,7 +14,7 @@
 
 module DCP
 using Oscar
-export arrangement, chains, standard_symmetric, ChainData, Arrangement
+export arrangement, chains, standard_symmetric, ChainData, Arrangement, all_flags, entry_lookup, entry_action
 
 const GG = GAP.Globals
 const loaded = Ref(false)
@@ -271,6 +271,37 @@ function chains(A::Arrangement)
         push!(result, chain_data(A, f))
     end
     result
+end
+
+"""All flags (chains of entries of the arrangement, not modulo G), as lists of indices into `A.elements` ordered by increasing
+dimension. These are the lists that `chains` enumerates before taking orbits. A flag contains another flag when the second is a
+subsequence of the first."""
+function all_flags(A::Arrangement)
+    E = A.elements
+    eligible = [i for i in eachindex(E) if A.projective ?
+        (0 < Int(E[i].dimension) < A.dimension) : Int(E[i].order) > 1]
+    contains = Dict(i => [j for j in eligible if Int(E[i].dimension) < Int(E[j].dimension) &&
+        Bool(GG.DCP_Contains(E[j].basis, E[i].basis))] for i in eligible)
+    flags = Vector{Int}[]
+    function extend(ix)
+        push!(flags, ix)
+        for j in contains[last(ix)]
+            extend([ix; j])
+        end
+    end
+    for i in eligible
+        extend([i])
+    end
+    flags
+end
+
+"""A dictionary from the row reduced basis (as a string) of every entry to its index, used by `entry_action`."""
+entry_lookup(A::Arrangement) = Dict(String(GG.String(e.basis)) => i for (i, e) in enumerate(A.elements))
+
+"""The permutation of the entries of the arrangement induced by the matrix `M` (a point subspace `W` goes to the row space of
+`W*M`), as a vector of indices."""
+function entry_action(A::Arrangement, lookup, M)
+    [lookup[String(GG.String(Int(e.dimension) == 0 ? e.basis : GG.DCP_RREF(e.basis * M)))] for e in A.elements]
 end
 
 # The standard basis is e_i-e_n. GAP composes permutations on the right,

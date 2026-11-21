@@ -72,7 +72,7 @@ inc_find_automorphism
 
 ## Indexed symbols, the first part of the recursion for linear actions
 
-These are the building blocks of the recursion of Kresch and Tschinkel for the class of `P(V)` (arXiv:2108.00518, Section 8): indexed symbols and the operations `psi`, `tau`, `omega`, `eta`, induction, restriction and the product. The recursion itself is not implemented yet.
+These are the building blocks of the recursion of Kresch and Tschinkel for the class of `P(V)` (arXiv:2108.00518, Section 8): indexed symbols and the operations `psi`, `tau`, `omega`, `eta`, induction, restriction and the product.
 
 ```@docs
 indexed_character
@@ -87,6 +87,23 @@ indexed_eta
 indexed_omega
 indexed_restrict
 indexed_product
+```
+
+## The recursion for projective linear actions
+
+`projective_class` implements Proposition 8.3 and Theorem 8.4 of Kresch and Tschinkel (arXiv:2108.00518) for the class of `P(V)` with a finite group acting linearly, over the cyclotomic numbers. A representation is given as a GAP matrix group in the convention of `dcp.jl`, prepared by `linrep`. The classes are formal sums of indexed symbols, the relations of the Burnside group are applied only afterwards, through `bc_image`.
+
+```@docs
+LinearRepresentation
+linrep
+indexed_difference
+chain_class
+projective_class
+indexed_negate_gamma
+affine_class
+projective_plus_class
+projective_bc_class
+projective_plus_bc_class
 ```
 
 ## Certificates
@@ -124,4 +141,7 @@ These existing routines expose arrangement data. They do not compute classes of 
 ```@docs
 EquivariantBurnside.DCP.arrangement
 EquivariantBurnside.DCP.chains
+EquivariantBurnside.DCP.all_flags
+EquivariantBurnside.DCP.entry_lookup
+EquivariantBurnside.DCP.entry_action
 ```

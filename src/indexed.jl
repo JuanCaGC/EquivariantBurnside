@@ -106,6 +106,11 @@ struct IndexedSymbol
     d::Int
     beta::Vector{Dict{Any,Rational{Int}}}
     gamma::Dict{Int,Dict{Any,Rational{Int}}}
+    # The only way to call the raw constructor is with the sentinel `Val(:raw)`, so that every public call goes through the
+    # validating constructor below (which also closes the three lists of generators to subgroups).
+    function IndexedSymbol(G, H, A, Y, d::Int, beta, gamma, ::Val{:raw})
+        return new(G, H, A, Y, d, beta, gamma)
+    end
 end
 
 function _norm_char(A, c, what)
@@ -144,7 +149,7 @@ function IndexedSymbol(G, Hgens, Agens, Ygens, d::Integer, beta, gamma)
     gm = Dict{Int,Dict{Any,Rational{Int}}}(Int(i) => _norm_char(A, c, "a character of gamma") for (i, c) in gamma)
     all(isone(h) for h in Set(h for h in H if all(iszero(c[h]) for c in values(gm)))) ||
         throw(ArgumentError("the restrictions of gamma to H do not generate the dual of H"))
-    return IndexedSymbol(G, H, A, Y, Int(d), bs, gm)
+    return IndexedSymbol(G, H, A, Y, Int(d), bs, gm, Val(:raw))
 end
 
 function Base.show(io::IO, s::IndexedSymbol)
