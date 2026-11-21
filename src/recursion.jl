@@ -593,3 +593,32 @@ function compare_fields(cls::IndexedClass, s1::IndexedSymbol, s2::IndexedSymbol)
     end
     return alldiff ? :different : :unknown
 end
+
+"""
+    field_pair_report(cls)
+
+For an indexed class built with `projective_class(rep; fields = true)`, compare the field data of every pair of distinct terms that
+have the same group data up to conjugation (same `H`, `A`, `Y~`, `d`, `beta`, `gamma`), using `compare_fields`. Terms without a field
+(`d = 0`) are skipped. Returns a named tuple `(classes, pairs, equal, different, unknown)`: the number of sets of terms that share
+group data and have at least two members, the number of pairs compared and the counts of the three outcomes. Distinct terms of a
+class that were not merged have different field keys, so `equal` is expected to be zero, and `unknown` counts the pairs that the
+fixed point signature cannot separate.
+"""
+function field_pair_report(cls::IndexedClass)
+    groups = Dict{Any,Vector{IndexedSymbol}}()
+    for (_, (_, s)) in cls.terms
+        isempty(s.F) && continue
+        k = minimum(_ikey(cls, s, g)[1:6] for g in cls.elems)
+        push!(get!(groups, k, IndexedSymbol[]), s)
+    end
+    classes = 0
+    cnt = Dict(:equal => 0, :different => 0, :unknown => 0)
+    for (_, ss) in groups
+        length(ss) >= 2 || continue
+        classes += 1
+        for i in 1:length(ss), j in (i + 1):length(ss)
+            cnt[compare_fields(cls, ss[i], ss[j])] += 1
+        end
+    end
+    return (classes = classes, pairs = sum(values(cnt)), equal = cnt[:equal], different = cnt[:different], unknown = cnt[:unknown])
+end

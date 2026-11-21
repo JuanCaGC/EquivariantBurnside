@@ -491,6 +491,17 @@ end;
         # the two 3-dimensional actions of A5 are not conjugate in PGL and not separated by the signature: the honest answer is unknown
         @test field_fixed_signature(sP2b) == sig2
         @test compare_fields(cls, sP2, sP2b) == :unknown
+        # the report over a class that holds the three symbols (kept apart by the twist key): P^2 against each other and P^1 x P^1
+        set_field_key_mode!(:twist)
+        clsr = IndexedClass(G, 3, [0])
+        for sy in (sP2, sP2b, sP1P1)
+            push!(clsr, sy)
+        end
+        set_field_key_mode!(:ratio)
+        @test length(clsr.terms) == 3
+        rpt = field_pair_report(clsr)
+        @test rpt == (classes = 1, pairs = 3, equal = 0, different = 2, unknown = 1)
+        @test field_pair_report(cls) == (classes = 0, pairs = 0, equal = 0, different = 0, unknown = 0)
         # a symbol without a field datum or without matrices is refused
         bare = IndexedSymbol(G, Z, Z, els, 2, Dict{Any,Rational{Int}}[], Dict(0 => Zc))
         @test_throws ArgumentError field_fixed_signature(bare)
@@ -576,6 +587,7 @@ end;
                 @test all(!sgn[B2] || sgn[B1] for B1 in keys(sgn), B2 in keys(sgn) if B1 != B2 && issubset(B1, B2))
             end
             @test nsym == count(t -> t[2].d > 0, values(cfm.terms))
+            @test field_pair_report(cfm).pairs == 0     # no two terms share group data (measured on the eleven groups of Phase 4.6)
         end
     end
 end
