@@ -37,6 +37,22 @@ EB_TwistStrings := function(els, trs)
   od;
   return res;
 end;
+EB_CommonEigvec := function(gens, n)
+  local search;
+  search := function(S, k)
+    local g, o, j, N;
+    if k > Length(gens) then return true; fi;
+    g := gens[k]; o := Order(g);
+    for j in [0..o-1] do
+      N := NullspaceMat(S*g - E(o)^j*S);
+      if Length(N) > 0 then
+        if search(N*S, k+1) then return true; fi;
+      fi;
+    od;
+    return false;
+  end;
+  return search(IdentityMat(n), 1);
+end;
 EB_QuotMat := function(U, W, A)
   local B, v, r, s, T;
   B := ShallowCopy(U); r := Length(U);
@@ -135,7 +151,8 @@ function _generic_class(rep::LinearRepresentation; fields::Bool = false)
     F = Any[]
     if fields && rep.n >= 2
         F = Any[FieldFactor(rep.n, Dict{Any,Vector{Rational{Int}}}(g => projective_invariant(rep.mats[g]) for g in rep.els),
-                            Dict{Any,Any}(g => _GAPG.TraceMat(rep.mats[g]) for g in rep.els))]
+                            Dict{Any,Any}(g => _GAPG.TraceMat(rep.mats[g]) for g in rep.els),
+                            Dict{Any,Any}(g => rep.mats[g] for g in rep.els))]
     end
     push!(cls, IndexedSymbol(P, rep.C, rep.C, Any[g for g in Oscar.gens(P)], rep.n - 1, Dict{Any,Rational{Int}}[], Dict(0 => eps); field = F))
     return cls
@@ -207,12 +224,14 @@ function indexed_product(classes::Vector{IndexedClass})
         for (k, s) in enumerate(syms), x in s.F
             D = Dict{Any,Vector{Rational{Int}}}()
             T = Dict{Any,Any}()
+            Mt = Dict{Any,Any}()
             for tup in Iterators.product((s2.Y for s2 in syms)...)
                 el = prod(embs[j](y) for (j, y) in enumerate(tup))
                 D[el] = x.inv[tup[k]]
                 haskey(x.tr, tup[k]) && (T[el] = x.tr[tup[k]])
+                haskey(x.mat, tup[k]) && (Mt[el] = x.mat[tup[k]])
             end
-            push!(F, FieldFactor(x.dim, D, T))
+            push!(F, FieldFactor(x.dim, D, T, Mt))
         end
         push!(out, coef, IndexedSymbol(P, H, A, Y, sum(s.d for s in syms), beta, gm, F, Val(:raw)))
     end
@@ -463,4 +482,114 @@ function field_faithful(cls::IndexedClass)
         maxf = max(maxf, length(s.F))
     end
     return ok, nofac, maxf
+end
+
+
+# the subgroups B of Y~ with A <= B and B/A abelian, each as `(set of elements, generators of B over A)`
+function _abelian_mod_A(s::IndexedSymbol)
+    Aset = Set(s.A)
+    e = one(first(s.Y))
+    close(gens) = begin
+        S = Set{Any}([e])
+        queue = Any[e]
+        while !isempty(queue)
+            x = pop!(queue)
+            for g in gens
+                z = x * g
+                z in S || (push!(S, z); push!(queue, z))
+            end
+        end
+        S
+    end
+    base = Any[a for a in s.A]
+    found = Dict{Set{Any},Vector{Any}}(close(base) => Any[])
+    frontier = collect(keys(found))
+    while !isempty(frontier)
+        nxt = Set{Any}[]
+        for B in frontier
+            gensB = found[B]
+            for y in s.Y
+                y in B && continue
+                all(g -> (y * g * inv(y) * inv(g)) in Aset, gensB) || continue
+                B2 = close(vcat(base, gensB, Any[y]))
+                if !haskey(found, B2)
+                    found[B2] = vcat(gensB, Any[y])
+                    push!(nxt, B2)
+                end
+            end
+        end
+        frontier = nxt
+    end
+    return found
+end
+
+"""
+    field_fixed_signature(s)
+
+The fixed point signature of the field datum of the indexed symbol `s`: a dictionary that sends every subgroup `B` of `Y~` with `A <= B`
+and `B/A` abelian (as a `Set` of elements) to `true` when `B` has a fixed point on the product `prod P(W_j)` of the projective spaces of
+the factors of the field datum, and to `false` otherwise.
+
+`B` has a fixed point on `P(W_j)` exactly when the matrices of its lifts (stored in the factor) have a common eigenvector, which is
+decided exactly with the cyclotomic matrices. It is computed from the matrices stored by `projective_class(rep; fields = true)`.
+Used by `compare_fields`. The existence of a fixed point of an abelian group acting generically freely is a birational invariant of
+the action (Reichstein and Youssin), and `Y~/A` acts faithfully on the field (`field_faithful`). The hypotheses of that theorem as
+used here have not been checked against the paper yet.
+
+Throws `ArgumentError` if the symbol has no field datum or a factor has no stored matrices.
+"""
+function field_fixed_signature(s::IndexedSymbol)
+    _rec_initialize!()
+    isempty(s.F) && throw(ArgumentError("the symbol has no field datum"))
+    for x in s.F
+        Set(keys(x.mat)) == Set(s.Y) || throw(ArgumentError("a field factor has no stored matrices, build the class with fields = true"))
+    end
+    out = Dict{Set{Any},Bool}()
+    for (B, gensB) in _abelian_mod_A(s)
+        out[B] = all(x -> _GAPG.EB_CommonEigvec(Oscar.GAP.GapObj(Any[x.mat[y] for y in gensB]), x.dim), s.F)
+    end
+    return out
+end
+
+"""
+    compare_fields(cls, s1, s2)
+
+A three valued comparison of the field data of two indexed symbols of the class `cls` that have the same group data up to
+conjugation in `G` (relation (C)): `:equal`, `:different` or `:unknown`.
+
+`:equal` when some conjugation carries the group data of `s1` to that of `s2` and the factors are conjugate in `PGL` (the `:twist` key,
+a sufficient condition for equality of the fields). `:different` when, for every conjugation carrying the group data of `s1` to that of
+`s2`, the fixed point signatures (`field_fixed_signature`) differ, so that no equivariant birational map can exist, assuming the
+birational invariance of the existence of a fixed point of abelian groups. `:unknown` otherwise: the actions are not conjugate in
+`PGL` and not separated by the signature, which is not a decision (the two actions of `A5` on `P^2` are conjugate in the Cremona group
+and not in `PGL`, and land here). Throws `ArgumentError` when the group data of the two symbols are not conjugate.
+"""
+function compare_fields(cls::IndexedClass, s1::IndexedSymbol, s2::IndexedSymbol)
+    id = one(cls.G)
+    k2 = _ikey(cls, s2, id)
+    admissible = [g for g in cls.elems if _ikey(cls, s1, g)[1:6] == k2[1:6]]
+    isempty(admissible) && throw(ArgumentError("the group data of the two symbols are not conjugate"))
+    old = FIELD_KEY_MODE[]
+    sig2 = field_fixed_signature(s2)
+    equal = false
+    alldiff = true
+    try
+        set_field_key_mode!(:twist)
+        k2 = _ikey(cls, s2, id)
+        for g in admissible
+            if _ikey(cls, s1, g)[7] == k2[7]
+                equal = true
+                break
+            end
+        end
+    finally
+        set_field_key_mode!(old)
+    end
+    equal && return :equal
+    sig1 = field_fixed_signature(s1)
+    for g in admissible
+        moved = Dict{Set{Any},Bool}(Set{Any}(x^g for x in B) => v for (B, v) in sig1)
+        moved == sig2 && (alldiff = false)
+    end
+    return alldiff ? :different : :unknown
 end

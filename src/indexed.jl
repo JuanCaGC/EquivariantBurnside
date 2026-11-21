@@ -129,8 +129,10 @@ struct FieldFactor
     dim::Int
     inv::Dict{Any,Vector{Rational{Int}}}
     tr::Dict{Any,Any}      # the trace of the matrix of a linear lift of each element (a GAP cyclotomic), used by the twist key
+    mat::Dict{Any,Any}     # the matrix of a linear lift of each element (a GAP matrix), used by the fixed point signature
 end
-FieldFactor(dim, inv) = FieldFactor(dim, inv, Dict{Any,Any}())
+FieldFactor(dim, inv) = FieldFactor(dim, inv, Dict{Any,Any}(), Dict{Any,Any}())
+FieldFactor(dim, inv, tr) = FieldFactor(dim, inv, tr, Dict{Any,Any}())
 
 # `FIELD_KEY_MODE` is `:ratio` (the ratios of eigenvalues of each element, the character of the adjoint representation) or `:twist`
 # (the full character of the linear lift minimized over twists by linear characters, exact conjugacy in PGL).
@@ -170,7 +172,8 @@ end
 
 # the factors of a symbol moved along a map of elements (`f(y)` is the new element) and restricted to the elements for which `keep` holds
 _move_field(F, f, keep = _ -> true) = Any[FieldFactor(x.dim, Dict{Any,Vector{Rational{Int}}}(f(y) => v for (y, v) in x.inv if keep(y)),
-                                                      Dict{Any,Any}(f(y) => v for (y, v) in x.tr if keep(y))) for x in F]
+                                                      Dict{Any,Any}(f(y) => v for (y, v) in x.tr if keep(y)),
+                                                      Dict{Any,Any}(f(y) => v for (y, v) in x.mat if keep(y))) for x in F]
 
 # kernel of the action on a factor, as a set of elements: the elements acting as scalars, that is with all ratios trivial
 _factor_kernel(x::FieldFactor) = Set(y for (y, v) in x.inv if all(iszero, v))

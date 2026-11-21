@@ -442,5 +442,141 @@ end
             @test s.F[1].inv[y] == f1.inv[g4^k] && s.F[2].inv[y] == f2.inv[g4^l]
         end
     end
+    @testset "fixed point signature and the three valued comparison of fields (Phase 4.6a)" begin
+        # P^2 against P^1 x P^1 for the icosahedral group, with Y~ = SL(2,5) and A its center. The Klein four group has a fixed point on
+        # P^2 (commuting lifts) and none on P^1 x P^1 (its lift is the quaternion group Q8 on the first factor).
+        Oscar.GAP.evalstr("""
+EBT_icos := function()
+  local P, reps;
+  P := Image(IsomorphismPermGroup(SL(2,5)));
+  reps := IrreducibleRepresentationsDixon(P);
+  return rec(P := P, reps := reps, degs := List(reps, r -> Length(Image(r, One(P)))));
+end;
+""")
+        st = GGl.EBT_icos()
+        degs = Int[d for d in st.degs]
+        Pg = st.P
+        G = Oscar.PermGroup(Pg)
+        els = [Oscar.group_element(G, x) for x in GGl.AsSSortedList(Pg)]
+        Z = [e for e in els if GGl.IsCentral(Pg, e.X)]
+        function factor(rep, dim)
+            Ms = Dict{Any,Any}(e => (rep === nothing ? GGl.IdentityMat(dim) : GGl.Image(rep, e.X)) for e in els)
+            FieldFactor(dim, Dict{Any,Vector{Rational{Int}}}(e => projective_invariant(M) for (e, M) in Ms),
+                        Dict{Any,Any}(e => GGl.TraceMat(M) for (e, M) in Ms), Ms)
+        end
+        i2 = findfirst(==(2), degs); i3 = findfirst(==(3), degs)
+        i3b = findnext(==(3), degs, i3 + 1)
+        Zc = Dict{Any,Rational{Int}}(z => (isone(z) ? 0 // 1 : 1 // 2) for z in Z)
+        mk(F) = IndexedSymbol(G, Z, Z, els, 2, Dict{Any,Rational{Int}}[], Dict(0 => Zc); field = Any[f for f in F])
+        cls = IndexedClass(G, 3, [0])
+        sP2 = mk([factor(st.reps[i3], 3)])
+        sP2b = mk([factor(st.reps[i3b], 3)])
+        sP1P1 = mk([factor(st.reps[i2], 2), factor(nothing, 2)])
+        sig2 = field_fixed_signature(sP2)
+        sig11 = field_fixed_signature(sP1P1)
+        @test length(sig2) == length(sig11) == 37       # the abelian subgroups of A5: 1 + 15 + 10 + 6 + 5
+        @test all(values(sig2))
+        @test count(!, values(sig11)) == 5              # exactly the five Klein four groups
+        @test all(length(B) == 8 for (B, v) in sig11 if !v)
+        @test compare_fields(cls, sP2, sP1P1) == :different
+        @test compare_fields(cls, sP1P1, sP2) == :different
+        @test compare_fields(cls, sP2, sP2) == :equal
+        @test compare_fields(cls, sP1P1, sP1P1) == :equal
+        # the order of the factors does not matter, and every factor counts (the second factor decides when the first has no obstruction)
+        sRev = mk([factor(nothing, 2), factor(st.reps[i2], 2)])
+        @test field_fixed_signature(sRev) == sig11
+        @test compare_fields(cls, sP1P1, sRev) == :equal
+        sTriv = mk([factor(nothing, 2), factor(st.reps[i3], 3)])
+        @test all(field_fixed_signature(sTriv)[B] for B in keys(sig2))
+        # the two 3-dimensional actions of A5 are not conjugate in PGL and not separated by the signature: the honest answer is unknown
+        @test field_fixed_signature(sP2b) == sig2
+        @test compare_fields(cls, sP2, sP2b) == :unknown
+        # a symbol without a field datum or without matrices is refused
+        bare = IndexedSymbol(G, Z, Z, els, 2, Dict{Any,Rational{Int}}[], Dict(0 => Zc))
+        @test_throws ArgumentError field_fixed_signature(bare)
+        nomat = IndexedSymbol(G, Z, Z, els, 2, Dict{Any,Rational{Int}}[], Dict(0 => Zc);
+                              field = Any[FieldFactor(3, factor(st.reps[i3], 3).inv)])
+        @test_throws ArgumentError field_fixed_signature(nomat)
+        other = IndexedSymbol(G, [], [], els, 2, Dict{Any,Rational{Int}}[], Dict(0 => Dict{Any,Rational{Int}}(one(G) => 0 // 1));
+                              field = Any[factor(st.reps[i3], 3)])
+        @test_throws ArgumentError compare_fields(cls, sP2, other)
+        # the common eigenvector search against the character theoretic criterion (multiplicity of a linear character), on every
+        # irreducible representation of SL(2,5) of dimension at least two and every abelian subgroup modulo the center
+        Oscar.GAP.evalstr("""
+EBT_charcheck := function(mats, n)
+  local M, tbl, ccl, chi, lin;
+  M := Group(Concatenation(mats, [IdentityMat(n)]));
+  tbl := CharacterTable(M); ccl := ConjugacyClasses(tbl);
+  chi := ClassFunction(tbl, List(ccl, c -> TraceMat(Representative(c))));
+  lin := Filtered(Irr(tbl), c -> c[1] = 1);
+  return ForAny(lin, l -> ScalarProduct(tbl, chi, l) <> 0);
+end;
+""")
+        total = 0
+        negatives = 0
+        for (ri, dim) in enumerate(degs)
+            dim >= 2 || continue
+            f = factor(st.reps[ri], dim)
+            sy = mk([f])
+            for (B, gensB) in EquivariantBurnside._abelian_mod_A(sy)
+                mats = Oscar.GAP.GapObj(Any[f.mat[y] for y in gensB])
+                mine = GGl.EB_CommonEigvec(mats, dim)
+                @test mine == GGl.EBT_charcheck(mats, dim)
+                total += 1
+                negatives += !mine
+            end
+        end
+        @test total == 296 && negatives == 20
+
+        # symbols with the same field and different gamma are not conjugate, and the product carries the matrices of both sides
+        C4 = cyclic_group(PermGroup, 4)
+        c4 = Any[g for g in C4]
+        g4 = Oscar.gens(C4)[1]
+        mats4(k, scalar) = Oscar.GAP.evalstr(scalar ? "[[E(4)^$k,0],[0,E(4)^$k]]" : "[[1,0],[0,E(4)^$k]]")
+        function f4(scalar)
+            Ms = Dict{Any,Any}(g4^k => mats4(k, scalar) for k in 0:3)
+            FieldFactor(2, Dict{Any,Vector{Rational{Int}}}(y => projective_invariant(M) for (y, M) in Ms),
+                        Dict{Any,Any}(y => GGl.TraceMat(M) for (y, M) in Ms), Ms)
+        end
+        cls4 = IndexedClass(C4, 2, [0])
+        sg(m) = IndexedSymbol(C4, [g4], [g4], [g4], 1, Dict{Any,Rational{Int}}[], Dict(0 => Dict{Any,Rational{Int}}(g4^k => (m * k) // 4 - floor(m * k // 4) for k in 0:3));
+                              field = Any[f4(true)])
+        @test compare_fields(cls4, sg(1), sg(1)) == :equal
+        @test_throws ArgumentError compare_fields(cls4, sg(1), sg(3))
+        mk4(I) = (c = IndexedClass(C4, 2, [I]); push!(c, IndexedSymbol(C4, [], [], [g4], 1, Dict{Any,Rational{Int}}[], Dict(I => Dict{Any,Rational{Int}}(one(C4) => 0 // 1)); field = Any[f4(false)])); c)
+        pc, _, _, _ = indexed_product(mk4(0), mk4(1))
+        psym = first(values(pc.terms))[2]
+        psig = field_fixed_signature(psym)
+        @test length(psym.F) == 2 && length(psig) == 15 && all(values(psig))
+
+        # Heisenberg group of order 27 on P^2: lifts of commuting elements do not commute, so the abelian subgroup C3 x C3 of the
+        # quotient has no fixed point while the four cyclic ones do
+        CYCP = "[[0,1,0],[0,0,1],[1,0,0]]"
+        dg(n, a, b, c) = "[[E($n)^$a,0,0],[0,E($n)^$b,0],[0,0,E($n)^$c]]"
+        Hg = Oscar.GAP.evalstr("Group(" * dg(3, 0, 1, 2) * "," * CYCP * ")")
+        cf = projective_class(linrep(Hg); fields = true)
+        gen = [s for (_, (_, s)) in cf.terms if s.d == 2]
+        @test length(gen) == 1
+        sg = field_fixed_signature(gen[1])
+        @test length(sg) == 6 && count(values(sg)) == 5
+        @test !sg[Set{Any}(gen[1].Y)]
+        # the matrices survive the whole recursion (products, restrictions, moves): every symbol with a field has a signature,
+        # which is monotone (a subgroup of a group with a fixed point has one) and true for A itself
+        SWP = "[[0,1,0],[1,0,0],[0,0,1]]"
+        for gs in ["[" * dg(2, 1, 1, 0) * "," * dg(2, 0, 1, 1) * "," * CYCP * "]",
+                   "[" * dg(2, 1, 1, 0) * "," * dg(2, 0, 1, 1) * "," * CYCP * "," * SWP * "]", "[" * dg(3, 1, 1, 1) * "," * dg(4, 1, 0, 0) * "]"]
+            cfm = projective_class(linrep(Oscar.GAP.evalstr("Group(" * gs * ")")); fields = true)
+            nsym = 0
+            for (_, (_, sy)) in cfm.terms
+                @test sum((x.dim - 1 for x in sy.F); init = 0) == sy.d
+                isempty(sy.F) && continue
+                sgn = field_fixed_signature(sy)
+                nsym += 1
+                @test sgn[Set{Any}(sy.A)]
+                @test all(!sgn[B2] || sgn[B1] for B1 in keys(sgn), B2 in keys(sgn) if B1 != B2 && issubset(B1, B2))
+            end
+            @test nsym == count(t -> t[2].d > 0, values(cfm.terms))
+        end
+    end
 end
 end

@@ -109,6 +109,8 @@ projective_invariant
 field_fingerprint
 field_faithful
 set_field_key_mode!
+field_fixed_signature
+compare_fields
 ```
 
 ## Certificates
