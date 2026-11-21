@@ -38,7 +38,7 @@ export IndexedSymbol, IndexedClass, indexed_character, indexed_psi, indexed_tau,
     indexed_induce, indexed_eta, indexed_omega, indexed_restrict, indexed_product,
     LinearRepresentation, linrep, indexed_difference, chain_class, projective_class, indexed_negate_gamma, affine_class,
     projective_plus_class, projective_bc_class, projective_plus_bc_class,
-    FieldFactor, projective_invariant, field_fingerprint, field_faithful, set_field_key_mode!, field_fixed_signature, compare_fields, field_pair_report, plus_divisor_symbols, certify_incompressible_dim3
+    FieldFactor, projective_invariant, field_fingerprint, field_faithful, set_field_key_mode!, field_fixed_signature, compare_fields, field_pair_report, plus_divisor_symbols, certify_incompressible_dim3, epsilon_twist, compare_plus_divisors
 export NonzeroCertificate, certificate_nonzero, verify, verify_with_group, write_certificate, read_certificate, group_fingerprint
 const GAPFILE = joinpath(@__DIR__, "..", "gap", "bc_structure.g")
 const _gap_loaded = Ref(false)

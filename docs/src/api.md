@@ -114,6 +114,8 @@ compare_fields
 field_pair_report
 plus_divisor_symbols
 certify_incompressible_dim3
+epsilon_twist
+compare_plus_divisors
 ```
 
 ## Certificates

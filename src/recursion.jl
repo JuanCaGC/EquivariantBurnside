@@ -742,3 +742,52 @@ function certify_incompressible_dim3(s::IndexedSymbol)
     end
     return (certified = all(c -> !c.in_PGL2 || c.witness !== nothing, cases), cases = cases)
 end
+
+
+"""
+    epsilon_twist(rep, Gprime, k)
+
+The automorphism `psi_k` of the group of `rep` for `G = C x G'`, where `C` is the scalar subgroup of `rep` (cyclic of order `n`) and
+`Gprime` is a GAP matrix group with `G = C x G'` as a group of matrices on `V`: an element `c g'` is sent to `c^k g'`. The
+representation `V_eps` of `G` is then the representation `V_eps'` composed with `psi_k`, where `eps'` is `eps^k` (the twist of Theorem
+11.2 of KT-repr), `k` coprime to `n`. Returns a function on the elements of `rep.P`. Throws `ArgumentError` if `k` is not coprime to
+`n`, or if some element of `G` is not a product of an element of `C` and an element of `G'`, or if `C` and `G'` meet.
+"""
+function epsilon_twist(rep::LinearRepresentation, Gprime, k::Integer)
+    n = length(rep.C)
+    gcd(k, n) == 1 || throw(ArgumentError("k must be coprime to the order $n of the scalar group"))
+    inGp(g) = _GAPG.IN(rep.mats[g], Gprime)
+    all(c -> isone(c) || !inGp(c), rep.C) || throw(ArgumentError("the scalar group meets G'"))
+    img = Dict{Any,Any}()
+    for m in rep.els
+        found = nothing
+        for c in rep.C
+            if inGp(inv(c) * m)
+                found = c
+                break
+            end
+        end
+        found === nothing && throw(ArgumentError("an element of G is not a product of a scalar and an element of G'"))
+        img[m] = found^k * (inv(found) * m)
+    end
+    return m -> img[m]
+end
+
+"""
+    compare_plus_divisors(rep, f)
+
+Compare the divisor symbols of `[P(1 + V) with G]` (`plus_divisor_symbols`) with their transport along the automorphism `f` of the
+group of `rep` (for example `epsilon_twist`), which are the divisor symbols of the twisted representation. Returns
+`(equal, certified)`: whether the two classes of divisor symbols are equal (symbols compared up to conjugation in `G` and equality
+of the field keys) and whether every symbol of the original class is certified incompressible by `certify_incompressible_dim3`.
+
+When `certified` holds, these symbols are free generators of `Burn^inc_3(G)` (Proposition 3.4 of KT-repr), so `equal = false` means that
+the classes of `P(1 + V)` and of its twist differ in `Burn_3(G)`, under the assumption that the terms of `omega` (whose fields contain a
+torus factor) do not produce symbols equal to these, which is not checked here. The statement is about the two characters `+-eps`.
+"""
+function compare_plus_divisors(rep::LinearRepresentation, f)
+    c = plus_divisor_symbols(rep)
+    twisted = indexed_induce(c, c.G, f)
+    cert = all(certify_incompressible_dim3(sy).certified for (_, (_, sy)) in c.terms)
+    return (equal = (twisted == c), certified = cert)
+end

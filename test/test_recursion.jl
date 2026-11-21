@@ -661,5 +661,34 @@ end;
             @test certify_incompressible_dim3(sy).certified
         end
     end
+    @testset "Theorem 11.2 of KT-repr: the classes of P(1 + V_eps) and P(1 + V_eps') (Phase 4.6d)" begin
+        S4 = DCP.standard_symmetric(4)
+        for (n, ks) in [(5, 1:4), (8, [1, 3, 5, 7])]
+            G = GGl.Group(Oscar.GAP.GapObj(vcat([GGl.E(n) * GGl.IdentityMat(3)], [g for g in GGl.GeneratorsOfGroup(S4)])))
+            rep = linrep(G)
+            @test length(rep.C) == n
+            for k in ks
+                r = compare_plus_divisors(rep, epsilon_twist(rep, S4, k))
+                @test r.certified
+                @test r.equal == (k % n == 1 || k % n == n - 1)      # the twists agree exactly when eps' = +-eps
+            end
+        end
+        G5 = GGl.Group(Oscar.GAP.GapObj(vcat([GGl.E(5) * GGl.IdentityMat(3)], [g for g in GGl.GeneratorsOfGroup(S4)])))
+        rep5 = linrep(G5)
+        f = epsilon_twist(rep5, S4, 2)
+        # psi_k is an automorphism of order dividing the order of k in (Z/n)^*, it fixes G' and acts on C by the power k
+        @test all(f(a * b) == f(a) * f(b) for a in rep5.els[1:12], b in rep5.els)
+        @test allunique(f(m) for m in rep5.els)
+        c0 = first(c for c in rep5.C if !isone(c))
+        @test f(c0) == c0^2
+        # S3 permuting the coordinates (the field is P^2 with a group that has no Klein four subgroup) is not certified
+        S3 = Oscar.GAP.evalstr("Group([[[0,1,0],[0,0,1],[1,0,0]],[[0,1,0],[1,0,0],[0,0,1]]])")
+        G3 = GGl.Group(Oscar.GAP.GapObj(vcat([GGl.E(5) * GGl.IdentityMat(3)], [g for g in GGl.GeneratorsOfGroup(S3)])))
+        rep3 = linrep(G3)
+        r3 = compare_plus_divisors(rep3, epsilon_twist(rep3, S3, 2))
+        @test !r3.certified
+        @test_throws ArgumentError epsilon_twist(rep5, S4, 5)
+        @test_throws ArgumentError epsilon_twist(rep5, GGl.Group(Oscar.GAP.evalstr("[[[1,0,0],[0,1,0],[0,0,1]]]")), 2)
+    end
 end
 end
