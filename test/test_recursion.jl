@@ -318,5 +318,29 @@ end
         @test !iszero(pc) && pc.n == 2 && isempty(pc.I)
         @test indexed_negate_gamma(indexed_negate_gamma(projective_class(rep))) == projective_class(rep)
     end
+    @testset "Section 10 of KT-repr: the symbols (C_n, Gbar' acting on k(P(V)), +-eps) in P(1 + V_eps)" begin
+        Oscar.GAP.evalstr("EB_ScalarId := function(z, n) return z * IdentityMat(n); end;")
+        function twisted(Gp, n)
+            d = Int(GGl.Length(GGl.One(Gp)))
+            gs = vcat([GGl.EB_ScalarId(GGl.E(n), d)], [g for g in GGl.GeneratorsOfGroup(Gp)])
+            return GGl.Group(Oscar.GAP.GapObj(gs))
+        end
+        function sec10(Gp, n)
+            rep = linrep(twisted(Gp, n))
+            pc = projective_plus_class(rep)
+            zc = first(x for x in rep.C if order(x) == n)
+            found = Dict{Rational{Int},Int}()
+            for (_, (coef, s)) in pc.terms
+                (length(s.A) == n && length(s.H) == 1 && length(s.Y) == Int(order(rep.P)) && s.d == rep.n - 1 &&
+                 length(s.beta) == 1 && Set(s.A) == Set(rep.C)) || continue
+                v = s.beta[1][zc]
+                found[v] = get(found, v, 0) + coef
+            end
+            return found
+        end
+        # exactly the two symbols with beta = eps and beta = -eps, each with coefficient one
+        @test sec10(DCP.standard_symmetric(3), 5) == Dict(1//5 => 1, 4//5 => 1)
+        @test sec10(dih(5), 7) == Dict(1//7 => 1, 6//7 => 1)
+    end
 end
 end
