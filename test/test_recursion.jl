@@ -590,5 +590,76 @@ end;
             @test field_pair_report(cfm).pairs == 0     # no two terms share group data (measured on the eleven groups of Phase 4.6)
         end
     end
+    @testset "incompressibility certificate in dimension 3 (Phase 4.6c)" begin
+        Oscar.GAP.evalstr("""
+EBT_faith3 := function(P)
+  local chi;
+  chi := First(Irr(P), c -> c[1] = 3 and Size(KernelOfCharacter(c)) = 1);
+  return IrreducibleRepresentationsDixon(P, chi);
+end;
+EBT_icos2 := function()
+  local P, reps;
+  P := Image(IsomorphismPermGroup(SL(2,5)));
+  reps := IrreducibleRepresentationsDixon(P);
+  return rec(P := P, reps := reps, degs := List(reps, r -> Length(Image(r, One(P)))));
+end;
+""")
+        # a divisor symbol (A = the center, beta = the character of order two) of the group `Pg` acting on a product of projective spaces
+        function divsym(Pg, reps_dims)
+            G = Oscar.PermGroup(Pg)
+            els = [Oscar.group_element(G, x) for x in GGl.AsSSortedList(Pg)]
+            Z = [e for e in els if GGl.IsCentral(Pg, e.X)]
+            length(Z) == 2 || error("test setup: the center must have order two")
+            facs = Any[]
+            for (rep, dim) in reps_dims
+                Ms = Dict{Any,Any}(e => (rep === nothing ? GGl.IdentityMat(dim) : GGl.Image(rep, e.X)) for e in els)
+                push!(facs, FieldFactor(dim, Dict{Any,Vector{Rational{Int}}}(e => projective_invariant(M) for (e, M) in Ms),
+                                        Dict{Any,Any}(e => GGl.TraceMat(M) for (e, M) in Ms), Ms))
+            end
+            b = Dict{Any,Rational{Int}}(z => (isone(z) ? 0 // 1 : 1 // 2) for z in Z)
+            return IndexedSymbol(G, [], Z, els, 2, [b], Dict{Int,Dict{Any,Rational{Int}}}(); field = facs)
+        end
+        # A5 on P^2 (lift SL(2,5) modulo its center): the Klein four group is the witness
+        st = GGl.EBT_icos2()
+        degs = Int[d for d in st.degs]
+        i2 = findfirst(==(2), degs); i3 = findfirst(==(3), degs)
+        r = certify_incompressible_dim3(divsym(st.P, [(st.reps[i3], 3)]))
+        @test r.certified
+        @test r.cases == [(N_over_A = 1, Q = 60, in_PGL2 = true, witness = 8)]
+        # the model P^1 x P^1 with trivial action on the second factor is compressible, and the certificate does not claim otherwise
+        r = certify_incompressible_dim3(divsym(st.P, [(st.reps[i2], 2), (nothing, 2)]))
+        @test !r.certified
+        @test r.cases == [(N_over_A = 1, Q = 60, in_PGL2 = true, witness = nothing)]
+        # S4 and PSL2(F7) times a central C2 acting by -1 on P^2
+        S4C2 = GGl.DirectProduct(GGl.Group(Oscar.GAP.evalstr("[(1,2,3,4),(1,2)]")), GGl.CyclicGroup(GGl.IsPermGroup, 2))
+        r = certify_incompressible_dim3(divsym(S4C2, [(GGl.EBT_faith3(S4C2), 3)]))
+        @test r.certified && r.cases == [(N_over_A = 1, Q = 24, in_PGL2 = true, witness = 8)]
+        PSLC2 = GGl.DirectProduct(GGl.PSL(2, 7), GGl.CyclicGroup(GGl.IsPermGroup, 2))
+        r = certify_incompressible_dim3(divsym(PSLC2, [(GGl.EBT_faith3(PSLC2), 3)]))
+        @test r.certified && r.cases == [(N_over_A = 1, Q = 168, in_PGL2 = false, witness = nothing)]
+        # negative control: a cyclic group has an admissible N and no witness
+        C10 = cyclic_group(PermGroup, 10)
+        g10 = Oscar.gens(C10)[1]
+        M10(k) = Oscar.GAP.evalstr("[[E(10)^$k,0,0],[0,E(10)^(3*$k),0],[0,0,E(10)^(7*$k)]]")
+        Ms = Dict{Any,Any}(g10^k => M10(k) for k in 0:9)
+        f10 = FieldFactor(3, Dict{Any,Vector{Rational{Int}}}(y => projective_invariant(M) for (y, M) in Ms),
+                          Dict{Any,Any}(y => GGl.TraceMat(M) for (y, M) in Ms), Ms)
+        s10 = IndexedSymbol(C10, [], [g10^5], [g10], 2, [Dict{Any,Rational{Int}}(one(C10) => 0 // 1, g10^5 => 1 // 2)],
+                            Dict{Int,Dict{Any,Rational{Int}}}(); field = Any[f10])
+        r = certify_incompressible_dim3(s10)
+        @test !r.certified && all(c -> c.witness === nothing, r.cases)
+        # refusals
+        @test_throws ArgumentError certify_incompressible_dim3(IndexedSymbol(C10, [], [g10^5], [g10], 2,
+            [Dict{Any,Rational{Int}}(one(C10) => 0 // 1, g10^5 => 1 // 2)], Dict{Int,Dict{Any,Rational{Int}}}()))
+        # the divisor symbols of P(1 + V) for S4 x C2 (scalars -1) carry the field and are certified
+        S4m = Oscar.GAP.evalstr("Group([[[0,1,0],[0,0,1],[1,0,0]],[[0,1,0],[1,0,0],[0,0,1]],[[-1,0,0],[0,-1,0],[0,0,1]]])")
+        Gs = GGl.Group(Oscar.GAP.GapObj(vcat([GGl.E(2) * GGl.IdentityMat(3)], [g for g in GGl.GeneratorsOfGroup(S4m)])))
+        divs = plus_divisor_symbols(linrep(Gs))
+        @test length(divs.terms) >= 1
+        for (_, (_, sy)) in divs.terms
+            @test sy.d == 2 && length(sy.beta) == 1 && !isempty(sy.F)
+            @test certify_incompressible_dim3(sy).certified
+        end
+    end
 end
 end

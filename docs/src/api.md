@@ -112,6 +112,8 @@ set_field_key_mode!
 field_fixed_signature
 compare_fields
 field_pair_report
+plus_divisor_symbols
+certify_incompressible_dim3
 ```
 
 ## Certificates

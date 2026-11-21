@@ -53,6 +53,35 @@ EB_CommonEigvec := function(gens, n)
   end;
   return search(IdentityMat(n), 1);
 end;
+EB_PGL2sub := function(Q)
+  local n, m, c, t, C;
+  n := Size(Q);
+  if IsCyclic(Q) or n = 4 then return true; fi;
+  if n in [12, 24, 60] and IdGroup(Q) in [[12, 3], [24, 12], [60, 5]] then return true; fi;
+  if n mod 2 = 0 and n >= 6 then
+    m := n / 2;
+    for c in Filtered(AsList(Q), x -> Order(x) = m) do
+      C := Subgroup(Q, [c]);
+      for t in Filtered(AsList(Q), x -> Order(x) = 2 and not x in C) do
+        if c^t = c^-1 then return true; fi;
+      od;
+    od;
+  fi;
+  return false;
+end;
+EB_NormalCyclicOverA := function(perms, aperms, eidx)
+  local R, A, res, N, Q;
+  R := Group(perms, ());
+  if Length(aperms) = 0 then A := TrivialSubgroup(R); else A := Subgroup(R, aperms); fi;
+  res := [];
+  for N in NormalSubgroups(R) do
+    if IsSubgroup(N, A) and IsCyclic(FactorGroup(N, A)) then
+      Q := FactorGroup(R, N);
+      Add(res, [List(AsList(N), x -> eidx^x), Size(Q), EB_PGL2sub(Q)]);
+    fi;
+  od;
+  return res;
+end;
 EB_QuotMat := function(U, W, A)
   local B, v, r, s, T;
   B := ShallowCopy(U); r := Length(U);
@@ -621,4 +650,95 @@ function field_pair_report(cls::IndexedClass)
         end
     end
     return (classes = classes, pairs = sum(values(cnt)), equal = cnt[:equal], different = cnt[:different], unknown = cnt[:unknown])
+end
+
+
+"""
+    plus_divisor_symbols(rep)
+
+The divisor symbols of the class `[P(1 + V) with G]` that come from the divisor `P(V)`: the symbols `(A, G/A acting on k(P(V)), +-gamma_0)`
+of `psi_{0}[P(V)](O(-1)) + psi_{0}[P(V)](O(1))` (Theorem 8.5 of KT-repr), with the field datum recorded. Returns an `IndexedClass` of
+dimension `n` with the empty index set, containing only the terms with `d = n - 1` (the generic terms of the two summands, computed without
+the chains because the chain terms of `projective_class` have a smaller `d`). The term
+with a torus coming from `omega` is not included. These are the candidates for incompressible symbols in Theorem 11.2 and Section 10.
+"""
+function plus_divisor_symbols(rep::LinearRepresentation)
+    c = _generic_class(rep; fields = true)     # the only terms with d = n - 1 of projective_class are the generic term, the others have d <= n - 2
+    return indexed_psi(c, Int[]) + indexed_psi(indexed_negate_gamma(c), Int[])
+end
+
+"""
+    certify_incompressible_dim3(s)
+
+Try to certify that the divisor symbol `s` (dimension 3, so `d = 2`, one character in `beta`, empty index set, with the field datum of
+`projective_class(rep; fields = true)`) is incompressible in the sense of Definition 3.3 of KT-repr. This is a certificate for the
+symbols it can handle, not a decision procedure: `certified = false` means that the arguments below do not exclude compressibility, not
+that the symbol is compressible.
+
+The argument. A divisor symbol of dimension 3 is compressible only if it is the term `Theta_2` of relation (B2) applied to a symbol
+with two characters, `d = 1`, field `K1`. Then `K = K1(t)` as `Y`-fields, with `Y = Y~/A` acting on `K1` through a quotient `Q = Y/N`
+and the kernel `N` acting on `t` by roots of unity (Construction (A)), so `N` is a cyclic normal subgroup. If `K` is rational, `K1` is a
+unirational curve, hence rational by Luroth, and `Q` acts faithfully on `k(P^1)`, so `Q` is a finite subgroup of `PGL2` (cyclic,
+dihedral, `A4`, `S4`, `A5`). Moreover, if `B` is a subgroup of `Y` with `B N / N` not cyclic, then `B N / N` is a Klein four group,
+which has no fixed point on `P^1`, hence `B` has no fixed point on a smooth projective model of `K` that maps equivariantly to `P^1`, and
+by the Reichstein-Youssin invariant (a finite abelian group acting generically freely: the existence of a fixed point is the same on all
+smooth projective models, over an algebraically closed field of characteristic zero) `B` has no fixed point on any model. So `s` is
+certified when for every cyclic normal `N` with `Y/N` in `PGL2` there is an abelian `B` (modulo `A`) that has a fixed point on the
+product of projective spaces of the field datum (`field_fixed_signature`) and `B N / N` is not cyclic. For `A5`, `S4` acting on `P^2`
+the witness is the Klein four group, for `PSL2(F7)` and `A6` no `N` is admissible, as in Theorem 11.2.
+
+Returns a named tuple `(certified, cases)` where each case describes one cyclic normal `N` containing `A` as `(N_over_A = ..., Q = ...,
+in_PGL2 = ..., witness = ...)`, with `witness` the order of the subgroup `B` found or `nothing`. Throws `ArgumentError` if the symbol is
+not of the required shape, has no field datum, or `Y~/A` does not act faithfully on the field datum.
+"""
+function certify_incompressible_dim3(s::IndexedSymbol)
+    _rec_initialize!()
+    (s.d == 2 && length(s.beta) == 1 && isempty(s.gamma)) ||
+        throw(ArgumentError("a divisor symbol of dimension 3 is required (d = 2, one beta, no gamma)"))
+    isempty(s.F) && throw(ArgumentError("the symbol has no field datum"))
+    Aset = Set(s.A)
+    K = reduce(intersect, (_factor_kernel(x) for x in s.F))
+    K == Set(y for y in s.Y if y in Aset) || throw(ArgumentError("Y~/A does not act faithfully on the field datum"))
+    Ys = s.Y
+    idx = Dict{Any,Int}(y => i for (i, y) in enumerate(Ys))
+    regperm(y) = _GAPG.PermList(Oscar.GAP.GapObj([idx[x * y] for x in Ys]))
+    perms = Oscar.GAP.GapObj(Any[regperm(y) for y in Ys])
+    aperms = Oscar.GAP.GapObj(Any[regperm(a) for a in s.A])
+    e = idx[one(first(Ys))]
+    raw = _GAPG.EB_NormalCyclicOverA(perms, aperms, e)
+    sig = Ref{Any}(nothing)
+    cases = NamedTuple[]
+    for r in raw
+        Nset = Set{Any}(Ys[Int(i)] for i in r[1])
+        Qord = Int(r[2])
+        ok = Bool(r[3])
+        witness = nothing
+        if ok
+            sig[] === nothing && (sig[] = field_fixed_signature(s))
+            for (B, v) in sig[]
+                v || continue
+                # B N / N is cyclic iff some element of B generates it, its order modulo N is |B| / |B intersect N|
+                m = length(B) ÷ length(intersect(B, Nset))
+                cyclic = false
+                for y in B
+                    k = 1
+                    z = y
+                    while !(z in Nset)
+                        z = z * y
+                        k += 1
+                    end
+                    if k == m
+                        cyclic = true
+                        break
+                    end
+                end
+                if !cyclic
+                    witness = length(B)
+                    break
+                end
+            end
+        end
+        push!(cases, (N_over_A = length(Nset) ÷ length(s.A), Q = Qord, in_PGL2 = ok, witness = witness))
+    end
+    return (certified = all(c -> !c.in_PGL2 || c.witness !== nothing, cases), cases = cases)
 end
