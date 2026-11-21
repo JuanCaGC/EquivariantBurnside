@@ -37,7 +37,8 @@ export IncSymbol, IncClass, incompressible_class, inc_transport, inc_find_automo
 export IndexedSymbol, IndexedClass, indexed_character, indexed_psi, indexed_tau, indexed_tau_matrix, indexed_reindex,
     indexed_induce, indexed_eta, indexed_omega, indexed_restrict, indexed_product,
     LinearRepresentation, linrep, indexed_difference, chain_class, projective_class, indexed_negate_gamma, affine_class,
-    projective_plus_class, projective_bc_class, projective_plus_bc_class
+    projective_plus_class, projective_bc_class, projective_plus_bc_class,
+    FieldFactor, projective_invariant, field_fingerprint, field_faithful
 export NonzeroCertificate, certificate_nonzero, verify, verify_with_group, write_certificate, read_certificate, group_fingerprint
 const GAPFILE = joinpath(@__DIR__, "..", "gap", "bc_structure.g")
 const _gap_loaded = Ref(false)

@@ -15,6 +15,17 @@ function _rec_initialize!()
 EB_CycExp := function(c, m)
   return Position(List([0..m-1], a->E(m)^a), c) - 1;
 end;
+EB_EigExps := function(M)
+  local o, n, mult, j, k, s, ex, m;
+  n := Length(M); o := Order(M); ex := [];
+  for j in [0..o-1] do
+    s := 0;
+    for k in [0..o-1] do s := s + TraceMat(M^k) * E(o)^(-j*k); od;
+    m := s / o;
+    for k in [1..m] do Add(ex, j/o); od;
+  od;
+  return ex;
+end;
 EB_QuotMat := function(U, W, A)
   local B, v, r, s, T;
   B := ShallowCopy(U); r := Length(U);
@@ -64,6 +75,14 @@ function linrep(G)
     return LinearRepresentation(G, arr, P, arr.dimension, els, mats, C)
 end
 
+# Phase 4.6. The projective invariant of a matrix of finite order: the sorted list of the ratios of its eigenvalues, as elements of
+# Q/Z. The eigenvalue exponents are found from the traces of the powers. Multiplying the matrix by a scalar does not change it.
+function projective_invariant(M)
+    _rec_initialize!()
+    ex = Rational{Int}[Int(_GAPG.NumeratorRat(x)) // Int(_GAPG.DenominatorRat(x)) for x in _GAPG.EB_EigExps(M)]
+    return sort!(Rational{Int}[_m1(a - b) for (i, a) in enumerate(ex) for (j, b) in enumerate(ex) if i != j])
+end
+
 # the eigenvalue of a scalar element as an element of Q/Z
 function _scalar_char(rep::LinearRepresentation, g)
     m = Int(Oscar.order(g))
@@ -80,11 +99,15 @@ _matrix_to_element(rep::LinearRepresentation, M) = Oscar.group_element(rep.P, _G
 
 The class with the single generic term `(C in C, G/C acting on k(P(V)), (), epsilon)` of Proposition 8.3 for the representation `rep`.
 """
-function _generic_class(rep::LinearRepresentation)
+function _generic_class(rep::LinearRepresentation; fields::Bool = false)
     P = rep.P
     cls = IndexedClass(P, rep.n, [0])
     eps = Dict{Any,Rational{Int}}(g => _scalar_char(rep, g) for g in rep.C)
-    push!(cls, IndexedSymbol(P, rep.C, rep.C, Any[g for g in Oscar.gens(P)], rep.n - 1, Dict{Any,Rational{Int}}[], Dict(0 => eps)))
+    F = Any[]
+    if fields && rep.n >= 2
+        F = Any[FieldFactor(rep.n, Dict{Any,Vector{Rational{Int}}}(g => projective_invariant(rep.mats[g]) for g in rep.els))]
+    end
+    push!(cls, IndexedSymbol(P, rep.C, rep.C, Any[g for g in Oscar.gens(P)], rep.n - 1, Dict{Any,Rational{Int}}[], Dict(0 => eps); field = F))
     return cls
 end
 
@@ -107,7 +130,7 @@ function indexed_difference(cls::IndexedClass)
                 gm[i] = Dict{Any,Rational{Int}}(a => _m1(s.gamma[i][a] - s.gamma[i - 1][a]) for a in s.A)
             end
         end
-        push!(out, coef, IndexedSymbol(s.G, s.H, s.A, s.Y, s.d, s.beta, gm))
+        push!(out, coef, IndexedSymbol(s.G, s.H, s.A, s.Y, s.d, s.beta, gm, s.F, Val(:raw)))
     end
     return out
 end
@@ -150,7 +173,15 @@ function indexed_product(classes::Vector{IndexedClass})
                 gm[i] = extend(k, c)
             end
         end
-        push!(out, coef, IndexedSymbol(P, H, A, Y, sum(s.d for s in syms), beta, gm))
+        F = Any[]
+        for (k, s) in enumerate(syms), x in s.F
+            D = Dict{Any,Vector{Rational{Int}}}()
+            for tup in Iterators.product((s2.Y for s2 in syms)...)
+                D[prod(embs[j](y) for (j, y) in enumerate(tup))] = x.inv[tup[k]]
+            end
+            push!(F, FieldFactor(x.dim, D))
+        end
+        push!(out, coef, IndexedSymbol(P, H, A, Y, sum(s.d for s in syms), beta, gm, F, Val(:raw)))
     end
     return out, P, embs
 end
@@ -169,7 +200,7 @@ set `{0,...,t}`, and `embN` the embedding of `NO` in `rep.P`. The graded piece `
 linear group, the class of its projective space is computed by `projective_class` recursively, the classes are multiplied,
 restricted to the image of `N` in the product (an injective map) and the characters are transformed by Convention 8.1.
 """
-function chain_class(rep::LinearRepresentation, cd)
+function chain_class(rep::LinearRepresentation, cd; fields::Bool = false)
     P = rep.P
     t = length(cd.indices)
     iso = rep.arr.raw.iso
@@ -190,7 +221,7 @@ function chain_class(rep::LinearRepresentation, cd)
         gens_ = [Qs(g) for g in Ngens]
         Gi = _GAPG.Group(Oscar.GAP.GapObj(gens_))
         ri = linrep(Gi)
-        cls_i = projective_class(ri)
+        cls_i = projective_class(ri; fields = fields)
         push!(classes, indexed_reindex(cls_i, [i]))
         push!(subreps, ri)
         push!(phis, Dict{Any,Any}(g => _matrix_to_element(ri, Qs(g)) for g in Nel))
@@ -206,7 +237,7 @@ function chain_class(rep::LinearRepresentation, cd)
     mv(c) = Dict{Any,Rational{Int}}(f(a) => v for (a, v) in c)
     for (_, (coef, s)) in resL.terms
         push!(out, coef, IndexedSymbol(NO, Any[f(x) for x in s.H], Any[f(x) for x in s.A], Any[f(x) for x in s.Y], s.d,
-            Dict{Any,Rational{Int}}[mv(c) for c in s.beta], Dict(i => mv(c) for (i, c) in s.gamma)))
+            Dict{Any,Rational{Int}}[mv(c) for c in s.beta], Dict(i => mv(c) for (i, c) in s.gamma), _move_field(s.F, f), Val(:raw)))
     end
     return indexed_difference(out), NO, embN
 end
@@ -250,8 +281,8 @@ together with the positions of the members of `Lambda` in `Lambda'`. Chains are 
 flag `Lambda' = Lambda'_0 h` of the representative `Lambda'_0` uses the class of `Lambda'_0` transported by `x -> x^h`.
 Relations are not applied, the result is a formal sum.
 """
-function projective_class(rep::LinearRepresentation)
-    cls = _generic_class(rep)
+function projective_class(rep::LinearRepresentation; fields::Bool = false)
+    cls = _generic_class(rep; fields = fields)
     chs = DCP.chains(rep.arr)
     isempty(chs) && return cls
     flags, lookup, rep_of = _flag_data(rep, chs)
@@ -261,7 +292,7 @@ function projective_class(rep::LinearRepresentation)
         cd = chs[k]
         f = Vector{Int}(cd.indices)
         t = length(f)
-        c, NO, embN = chain_class(rep, cd)
+        c, NO, embN = chain_class(rep, cd; fields = fields)
         Ngens = Any[embN(g) for g in Oscar.gens(NO)]
         nperms = [DCP.entry_action(rep.arr, lookup, rep.mats[g]) for g in Ngens]
         longer = [fl for fl in flags if length(fl) > t && all(x in fl for x in f)]
@@ -306,7 +337,7 @@ function indexed_negate_gamma(cls::IndexedClass)
     out = IndexedClass(cls.G, cls.n, cls.I, cls.elems, cls.idx, Dict{Any,Tuple{Int,IndexedSymbol}}())
     for (_, (coef, s)) in cls.terms
         gm = Dict{Int,Dict{Any,Rational{Int}}}(i => Dict{Any,Rational{Int}}(a => _m1(-v) for (a, v) in c) for (i, c) in s.gamma)
-        push!(out, coef, IndexedSymbol(s.G, s.H, s.A, s.Y, s.d, s.beta, gm))
+        push!(out, coef, IndexedSymbol(s.G, s.H, s.A, s.Y, s.d, s.beta, gm, s.F, Val(:raw)))
     end
     return out
 end
@@ -352,4 +383,51 @@ The image in `BC_n(G)` of `[P(1 + V) with G]` as a `BCClass` of `rep.P`, from `p
 function projective_plus_bc_class(rep::LinearRepresentation)
     out, _, _, _ = indexed_eta(projective_plus_class(rep), Any[])
     return out
+end
+
+
+"""
+    field_fingerprint(cls)
+
+The fingerprint of an indexed class that carries the field datum (build it with `projective_class(rep; fields = true)`).
+
+Returns a sorted vector of pairs `key => coefficient`, where `key` is the tuple `(h, a, y, d, I, betas, gammas, factors)` with the
+orders `|H|`, `|A|`, `|Y~|`, the transcendence degree `d`, the index set, the sorted orders of the characters of `beta`, the orders of
+the characters of `gamma` (as pairs `(index, order)`), and the sorted list of triples `(dim W_j, |image of Y~ in PGL(W_j)|, |kernel|)`
+over the factors `k(P(W_j))` of the field. Coefficients of equal keys are added and zero totals are dropped. This is a coarse
+invariant (orders only), meant for comparisons and counting, not a decision of equality of symbols.
+"""
+function field_fingerprint(cls::IndexedClass)
+    ordchar(ch) = foldl(lcm, (denominator(v) for v in values(ch)); init = 1)
+    out = Dict{Any,Int}()
+    for (_, (c, s)) in cls.terms
+        facs = sort!([(x.dim, length(s.Y) ÷ length(_factor_kernel(x)), length(_factor_kernel(x))) for x in s.F])
+        key = (length(s.H), length(s.A), length(s.Y), s.d, Tuple(cls.I), Tuple(sort([ordchar(b) for b in s.beta])),
+               Tuple(sort([(j, ordchar(g)) for (j, g) in s.gamma])), Tuple(facs))
+        out[key] = get(out, key, 0) + c
+    end
+    return sort!(collect(filter(kv -> kv[2] != 0, out)); by = string)
+end
+
+"""
+    field_faithful(cls)
+
+Whether, for every symbol of `cls`, the intersection of the kernels of the actions on the factors of its field datum is exactly `A`
+(so that `Y~/A` acts faithfully on the field) and `A` lies in every kernel. Returns `(ok, terms_without_factor, max_factors)`.
+"""
+function field_faithful(cls::IndexedClass)
+    ok = true
+    nofac = 0
+    maxf = 0
+    for (_, (_, s)) in cls.terms
+        if isempty(s.F)
+            nofac += 1
+            ok &= length(s.A) == length(s.Y)
+        else
+            K = reduce(intersect, (_factor_kernel(x) for x in s.F))
+            ok &= K == Set(s.Y[findall(in(Set(s.A)), s.Y)]) && Set(s.A) <= K
+        end
+        maxf = max(maxf, length(s.F))
+    end
+    return ok, nofac, maxf
 end

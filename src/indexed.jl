@@ -106,11 +106,39 @@ struct IndexedSymbol
     d::Int
     beta::Vector{Dict{Any,Rational{Int}}}
     gamma::Dict{Int,Dict{Any,Rational{Int}}}
+    F::Vector{Any}       # the optional field datum (Phase 4.6): a list of `FieldFactor`, empty when the field is not recorded
     # The only way to call the raw constructor is with the sentinel `Val(:raw)`, so that every public call goes through the
     # validating constructor below (which also closes the three lists of generators to subgroups).
     function IndexedSymbol(G, H, A, Y, d::Int, beta, gamma, ::Val{:raw})
-        return new(G, H, A, Y, d, beta, gamma)
+        return new(G, H, A, Y, d, beta, gamma, Any[])
     end
+    function IndexedSymbol(G, H, A, Y, d::Int, beta, gamma, F, ::Val{:raw})
+        return new(G, H, A, Y, d, beta, gamma, F)
+    end
+end
+
+"""
+    FieldFactor(dim, inv)
+
+One factor `k(P(W))` of the field datum of an indexed symbol (Phase 4.6): `dim` is the dimension of `W` (at least 2) and `inv`
+sends each element `y` of the group `Y~` of the symbol to the projective invariant of its action on `W`, see `projective_invariant`.
+The invariant is the sorted list of the ratios of eigenvalues (as elements of `Q/Z`), which does not depend on the scalar
+lift of the element of `PGL(W)`. It is a conjugation invariant of the projective representation, not a complete one.
+"""
+struct FieldFactor
+    dim::Int
+    inv::Dict{Any,Vector{Rational{Int}}}
+end
+
+# the factors of a symbol moved along a map of elements (`f(y)` is the new element) and restricted to the elements for which `keep` holds
+_move_field(F, f, keep = _ -> true) = Any[FieldFactor(x.dim, Dict{Any,Vector{Rational{Int}}}(f(y) => v for (y, v) in x.inv if keep(y))) for x in F]
+
+# kernel of the action on a factor, as a set of elements: the elements acting as scalars, that is with all ratios trivial
+_factor_kernel(x::FieldFactor) = Set(y for (y, v) in x.inv if all(iszero, v))
+
+function _field_key(F, cj)
+    isempty(F) && return ()
+    return Tuple(sort!([(x.dim, sort!(Tuple{Int,Vector{Rational{Int}}}[(cj(y), v) for (y, v) in x.inv])) for x in F]))
 end
 
 function _norm_char(A, c, what)
@@ -125,7 +153,7 @@ function _norm_char(A, c, what)
     return out
 end
 
-function IndexedSymbol(G, Hgens, Agens, Ygens, d::Integer, beta, gamma)
+function IndexedSymbol(G, Hgens, Agens, Ygens, d::Integer, beta, gamma; field = Any[])
     d >= 0 || throw(ArgumentError("d must be nonnegative"))
     H = _subgroup_elements(G, Hgens)
     A = _subgroup_elements(G, Agens)
@@ -149,7 +177,12 @@ function IndexedSymbol(G, Hgens, Agens, Ygens, d::Integer, beta, gamma)
     gm = Dict{Int,Dict{Any,Rational{Int}}}(Int(i) => _norm_char(A, c, "a character of gamma") for (i, c) in gamma)
     all(isone(h) for h in Set(h for h in H if all(iszero(c[h]) for c in values(gm)))) ||
         throw(ArgumentError("the restrictions of gamma to H do not generate the dual of H"))
-    return IndexedSymbol(G, H, A, Y, Int(d), bs, gm, Val(:raw))
+    for x in field
+        x isa FieldFactor || throw(ArgumentError("the field datum must be a list of FieldFactor"))
+        x.dim >= 2 || throw(ArgumentError("a field factor has dimension at least two"))
+        Set(keys(x.inv)) == Set(Y) || throw(ArgumentError("a field factor is not defined on exactly the elements of Y~"))
+    end
+    return IndexedSymbol(G, H, A, Y, Int(d), bs, gm, Any[x for x in field], Val(:raw))
 end
 
 function Base.show(io::IO, s::IndexedSymbol)
@@ -206,7 +239,7 @@ function _ikey(cls::IndexedClass, s::IndexedSymbol, g)
     y = sort!(Int[cj(x) for x in s.Y])
     b = sort!([chars(c) for c in s.beta])
     gm = [(i, chars(c)) for (i, c) in sort!(collect(s.gamma); by = first)]
-    return (h, a, y, s.d, b, gm)
+    return (h, a, y, s.d, b, gm, _field_key(s.F, cj))
 end
 
 function _icanonical(cls::IndexedClass, s::IndexedSymbol)
@@ -324,7 +357,7 @@ function indexed_psi(cls::IndexedClass, J)
         H = Any[h for h in s.H if all(iszero(s.gamma[i][h]) for i in rem)]
         beta = vcat(s.beta, Dict{Any,Rational{Int}}[s.gamma[i] for i in rem])
         gm = Dict{Int,Dict{Any,Rational{Int}}}(j => s.gamma[j] for j in Jl)
-        push!(out, coef, IndexedSymbol(s.G, H, s.A, s.Y, s.d, beta, gm))
+        push!(out, coef, IndexedSymbol(s.G, H, s.A, s.Y, s.d, beta, gm, s.F, Val(:raw)))
     end
     return out
 end
@@ -413,7 +446,7 @@ function indexed_tau(cls::IndexedClass, J)
         for j in cls.I
             gm[j] = Dict{Any,Rational{Int}}(a => _m1(sum((s.gamma[i][a] for i in con[j]); init = 0 // 1)) for a in s.A)
         end
-        push!(out, coef, IndexedSymbol(s.G, s.H, s.A, s.Y, s.d, s.beta, gm))
+        push!(out, coef, IndexedSymbol(s.G, s.H, s.A, s.Y, s.d, s.beta, gm, s.F, Val(:raw)))
     end
     return out
 end
@@ -436,7 +469,7 @@ function indexed_reindex(cls::IndexedClass, newI)
     mp = Dict(o => n for (o, n) in zip(cls.I, nl))
     out = IndexedClass(cls.G, cls.n, nl, cls.elems, cls.idx, Dict{Any,Tuple{Int,IndexedSymbol}}())
     for (_, (coef, s)) in cls.terms
-        push!(out, coef, IndexedSymbol(s.G, s.H, s.A, s.Y, s.d, s.beta, Dict(mp[i] => c for (i, c) in s.gamma)))
+        push!(out, coef, IndexedSymbol(s.G, s.H, s.A, s.Y, s.d, s.beta, Dict(mp[i] => c for (i, c) in s.gamma), s.F, Val(:raw)))
     end
     return out
 end
@@ -456,7 +489,7 @@ function indexed_induce(cls::IndexedClass, G, f)
     mv(c) = Dict{Any,Rational{Int}}(f(a) => v for (a, v) in c)
     for (_, (coef, s)) in cls.terms
         push!(out, coef, IndexedSymbol(G, Any[f(x) for x in s.H], Any[f(x) for x in s.A], Any[f(x) for x in s.Y], s.d,
-            Dict{Any,Rational{Int}}[mv(c) for c in s.beta], Dict(i => mv(c) for (i, c) in s.gamma)))
+            Dict{Any,Rational{Int}}[mv(c) for c in s.beta], Dict(i => mv(c) for (i, c) in s.gamma), _move_field(s.F, f), Val(:raw)))
     end
     return out
 end

@@ -30,6 +30,7 @@ function indexed_omega(cls::IndexedClass, J)
         A2set = Set(A2)
         H2 = Any[h for h in s.H if h in A2set]
         gm = Dict{Int,Dict{Any,Rational{Int}}}(j => rs(s.gamma[j]) for j in Jl)
+        isempty(s.F) || throw(ArgumentError("omega adds a torus to the field and is not supported on symbols that carry a field datum"))
         push!(out, coef, IndexedSymbol(s.G, H2, A2, s.Y, s.d + length(rem), beta2, gm))
     end
     return out
@@ -84,7 +85,8 @@ function indexed_restrict(cls::IndexedClass, Lgens)
             Y2 = Any[Limg[conj(y)] for y in s.Y if keep(y)]
             A2L = Any[Limg[a] for a in A2]
             gm = Dict{Int,Dict{Any,Rational{Int}}}(i => rs(c) for (i, c) in s.gamma)
-            push!(out, coef, IndexedSymbol(L, H2, A2L, Y2, s.d, beta2, gm))
+            F2 = _move_field(s.F, y -> Limg[conj(y)], keep)
+            push!(out, coef, IndexedSymbol(L, H2, A2L, Y2, s.d, beta2, gm, F2, Val(:raw)))
         end
     end
     return out, L, emb
@@ -119,7 +121,9 @@ function indexed_product(a::IndexedClass, b::IndexedClass)
         for (i, c) in s2.gamma
             gm[i] = ext2(c, s1.A)
         end
-        push!(out, c1 * c2, IndexedSymbol(P, prod(s1.H, s2.H), prod(s1.A, s2.A), prod(s1.Y, s2.Y), s1.d + s2.d, beta, gm))
+        F = vcat(Any[FieldFactor(x.dim, Dict{Any,Vector{Rational{Int}}}(e1(y1) * e2(y2) => v for (y1, v) in x.inv for y2 in s2.Y)) for x in s1.F],
+                 Any[FieldFactor(x.dim, Dict{Any,Vector{Rational{Int}}}(e1(y1) * e2(y2) => v for (y2, v) in x.inv for y1 in s1.Y)) for x in s2.F])
+        push!(out, c1 * c2, IndexedSymbol(P, prod(s1.H, s2.H), prod(s1.A, s2.A), prod(s1.Y, s2.Y), s1.d + s2.d, beta, gm, F, Val(:raw)))
     end
     return out, P, e1, e2
 end

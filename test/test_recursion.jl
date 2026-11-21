@@ -342,5 +342,42 @@ end
         @test sec10(DCP.standard_symmetric(3), 5) == Dict(1//5 => 1, 4//5 => 1)
         @test sec10(dih(5), 7) == Dict(1//7 => 1, 6//7 => 1)
     end
+    @testset "field datum of the symbols (Phase 4.6)" begin
+        # the projective invariant is the sorted list of ratios of eigenvalues, unchanged by a scalar
+        M = Oscar.GAP.evalstr("[[1,0],[0,-1]]")
+        @test projective_invariant(M) == [1 // 2, 1 // 2]
+        @test projective_invariant(GGl.E(4) * M) == projective_invariant(M)
+        @test projective_invariant(GGl.IdentityMat(3)) == zeros(Rational{Int}, 6)
+        @test projective_invariant(Oscar.GAP.evalstr("[[0,1,0],[0,0,1],[1,0,0]]")) == sort([1 // 3, 1 // 3, 1 // 3, 2 // 3, 2 // 3, 2 // 3])
+        # recording the field changes neither the number of terms nor the coefficients, and Y~/A acts faithfully on the field
+        function fcheck(G)
+            rep = linrep(G)
+            c0 = projective_class(rep)
+            cf = projective_class(rep; fields = true)
+            ok, nofac, maxf = field_faithful(cf)
+            @test ok
+            @test length(cf.terms) == length(c0.terms)
+            @test sum(c for (_, (c, _)) in cf.terms) == sum(c for (_, (c, _)) in c0.terms)
+            return rep, cf, nofac, maxf
+        end
+        rep, cf, nofac, maxf = fcheck(DCP.standard_symmetric(4))
+        @test (nofac, maxf) == (11, 1)
+        for G2 in (dih(3), dih(5), cyc(8, 1, 3), GGl.EB_SmallFaithful2(24, 3))
+            fcheck(G2)
+        end
+        # the printed field data of A4 acting on P^2: the generic term, then two terms with a P^1 and the points
+        A4 = GGl.DerivedSubgroup(DCP.standard_symmetric(4))
+        repA, cfA, _, _ = fcheck(A4)
+        fp = Dict(field_fingerprint(cfA))
+        @test fp[(1, 1, 12, 2, (0,), (), ((0, 1),), ((3, 12, 1),))] == 1
+        @test fp[(1, 2, 4, 1, (0,), (2,), ((0, 1),), ((2, 2, 2),))] == 1
+        @test fp[(1, 3, 3, 0, (0,), (3, 3), ((0, 3),), ())] == 4
+        # invariance under a change of basis of V
+        T = Oscar.GAP.evalstr("[[1,1,0],[0,1,0],[0,0,1]]")
+        A4b = GGl.Group(Oscar.GAP.GapObj([GGl.Inverse(T) * g * T for g in GGl.GeneratorsOfGroup(A4)]))
+        @test field_fingerprint(projective_class(linrep(A4b); fields = true)) == field_fingerprint(cfA)
+        # omega adds a torus to the field and is refused on symbols that carry a field datum
+        @test_throws ArgumentError indexed_omega(cfA, Int[])
+    end
 end
 end

@@ -104,6 +104,10 @@ affine_class
 projective_plus_class
 projective_bc_class
 projective_plus_bc_class
+FieldFactor
+projective_invariant
+field_fingerprint
+field_faithful
 ```
 
 ## Certificates
