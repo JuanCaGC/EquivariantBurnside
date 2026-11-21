@@ -389,5 +389,58 @@ end
         # omega adds a torus to the field and is refused on symbols that carry a field datum
         @test_throws ArgumentError indexed_omega(cfA, Int[])
     end
+    @testset "field datum: identification, negative cases and the product" begin
+        S4g = symmetric_group(4)
+        g4 = cperm(S4g, [1, 2, 3, 4])
+        G = S4g
+        triv = Dict(one(G) => 0 // 1)
+        # a factor k(P^1) on which g acts by diag(1, i), optionally twisted by the linear character g -> i
+        function p1factor(twist::Bool, trivial::Bool = false)
+            inv = Dict{Any,Vector{Rational{Int}}}()
+            tr = Dict{Any,Any}()
+            for k in 0:3
+                M = Oscar.GAP.evalstr("[[1,0],[0,E(4)^$k]]")
+                trivial && (M = Oscar.GAP.evalstr("[[1,0],[0,1]]"))
+                twist && (M = Oscar.GAP.evalstr("E(4)^$k") * M)
+                inv[g4^k] = projective_invariant(M)
+                tr[g4^k] = Oscar.GAP.Globals.TraceMat(M)
+            end
+            return FieldFactor(2, inv, tr)
+        end
+        sym(F) = IndexedSymbol(G, [], [], [g4], 1, [], Dict(0 => triv); field = F)
+        cls(syms...) = begin
+            c = IndexedClass(G, 2, [0])
+            for s in syms; push!(c, s); end
+            c
+        end
+        # equal field data are identified, different field data are kept apart
+        @test length(cls(sym(Any[p1factor(false)]), sym(Any[p1factor(false)])).terms) == 1
+        @test first(values(cls(sym(Any[p1factor(false)]), sym(Any[p1factor(false)])).terms))[1] == 2
+        @test length(cls(sym(Any[p1factor(false)]), sym(Any[p1factor(false, true)])).terms) == 2
+        @test length(cls(sym(Any[p1factor(false)]), sym(Any[])).terms) == 2
+        # the same projective action presented by a twisted lift is the same field datum, in both keys
+        @test length(cls(sym(Any[p1factor(false)]), sym(Any[p1factor(true)])).terms) == 1
+        set_field_key_mode!(:twist)
+        @test length(cls(sym(Any[p1factor(false)]), sym(Any[p1factor(true)])).terms) == 1
+        @test length(cls(sym(Any[p1factor(false)]), sym(Any[p1factor(false, true)])).terms) == 2
+        set_field_key_mode!(:ratio)
+        # the faithfulness check has negative answers: a trivial action on the factor, and Y~ larger than A with no factor
+        @test field_faithful(cls(sym(Any[p1factor(false)])))[1]
+        @test !field_faithful(cls(sym(Any[p1factor(false, true)])))[1]
+        @test !field_faithful(cls(sym(Any[])))[1]
+        # the binary product carries the factors of each side, evaluated on the corresponding component
+        a = cls(sym(Any[p1factor(false)]))
+        b = IndexedClass(G, 2, [1])
+        push!(b, IndexedSymbol(G, [], [], [g4], 1, [], Dict(1 => triv); field = Any[p1factor(true)]))
+        prodcls, P, e1, e2 = indexed_product(a, b)
+        s = first(values(prodcls.terms))[2]
+        @test length(s.F) == 2 && Set(keys(s.F[1].inv)) == Set(s.Y)
+        f1 = p1factor(false); f2 = p1factor(true)
+        for k in 0:3, l in 0:3
+            y = e1(g4^k) * e2(g4^l)
+            @test any(x -> x.inv[y] == f1.inv[g4^k], s.F) && any(x -> x.inv[y] == f2.inv[g4^l], s.F)
+            @test s.F[1].inv[y] == f1.inv[g4^k] && s.F[2].inv[y] == f2.inv[g4^l]
+        end
+    end
 end
 end
