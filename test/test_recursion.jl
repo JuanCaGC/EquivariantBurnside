@@ -533,6 +533,8 @@ end;
                 mats = Oscar.GAP.GapObj(Any[f.mat[y] for y in gensB])
                 mine = GGl.EB_CommonEigvec(mats, dim)
                 @test mine == GGl.EBT_charcheck(mats, dim)
+                # the criterion derived independently by Codex (D47a): B fixes a point iff all its lifts commute as matrices
+                @test mine == all(f.mat[a] * f.mat[b] == f.mat[b] * f.mat[a] for a in gensB, b in gensB)
                 total += 1
                 negatives += !mine
             end
