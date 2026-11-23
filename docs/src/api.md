@@ -93,6 +93,11 @@ indexed_product
 
 `projective_class` implements Proposition 8.3 and Theorem 8.4 of Kresch and Tschinkel (arXiv:2108.00518) for the class of `P(V)` with a finite group acting linearly, over the cyclotomic numbers. A representation is given as a GAP matrix group in the convention of `dcp.jl`, prepared by `linrep`. The classes are formal sums of indexed symbols, the relations of the Burnside group are applied only afterwards, through `bc_image`.
 
+`plus_divisor_symbols(rep)` returns the two generic psi divisor terms with their field data.
+Use `plus_divisor_symbols(rep; omega = true)` to include the omega divisor terms.
+`omega_divisor_symbols(rep)` returns just those additional terms, including lift matrices
+for the action on the torus variable. The omega field construction supports dimension three.
+
 ```@docs
 LinearRepresentation
 linrep
@@ -113,6 +118,7 @@ field_fixed_signature
 compare_fields
 field_pair_report
 plus_divisor_symbols
+omega_divisor_symbols
 certify_incompressible_dim3
 epsilon_twist
 compare_plus_divisors

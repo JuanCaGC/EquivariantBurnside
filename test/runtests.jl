@@ -86,3 +86,17 @@ using Test
         include("test_incompressible.jl")
     end
 end
+
+@testset "Independent adversarial field data" begin
+    include("test_field_adversarial.jl")
+end
+@testset "Independent adversarial incompressibility certificates" begin
+    include("test_certificate_adversarial.jl")
+end
+@testset "Independent adversarial scalar twists" begin
+    include("test_twist_adversarial.jl")
+end
+
+@testset "Omega divisor fields" begin
+    include("test_omega_divisors.jl")
+end

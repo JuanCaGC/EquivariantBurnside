@@ -654,17 +654,84 @@ end
 
 
 """
-    plus_divisor_symbols(rep)
+    omega_divisor_symbols(rep)
+
+Return the omega divisor contribution to `[P(1 + V) with G]` of Theorem 8.5
+of KT-repr. Only `rep.n == 3` is supported, otherwise throw `ArgumentError`.
+The result is an `IndexedClass(rep.P, 3, Int[])`. Each term has `d = 2`,
+one character in `beta`, empty `gamma`, trivial auxiliary `H`, and a list
+of `FieldFactor` objects with invariant, trace and lift matrix dictionaries
+on every element of `Y`. Coefficients are one before conjugate terms merge.
+
+Only generic terms of chains of length one contribute. Their two graded
+pieces have dimensions `(1, 2)` or `(2, 1)`, so their field has dimension one
+and omega adds one variable. Increased stabilizers, longer chains and deeper
+stratum corrections have field dimension zero before omega. The empty chain
+instead gives dimension three and no normal character.
+
+Let `A` act scalarly on both pieces, with positive eigencharacters `chi1`
+and `chi2` in the row action convention of `chain_class` and KT-repr Table 2.
+The stabilizer becomes `ker(chi1)` and beta is `(chi2 - chi1)` restricted to
+that kernel. A zero restriction contributes nothing. The normalizer `Y` is
+unchanged. For blocks `(1, 2)` the field is presented by
+`P(U2) x P(1 + U1)`. For `(2, 1)` it is presented by `P(1 + U1)`.
+These are equivariant models of the tautological line over `P(U1)`, together
+with the remaining projective factor, hence retain the action on the torus
+variable in `k(P(U))(t)`.
+"""
+function omega_divisor_symbols(rep::LinearRepresentation)
+    rep.n == 3 || throw(ArgumentError("omega divisor fields require dimension 3"))
+    out = IndexedClass(rep.P, rep.n, Int[])
+    GG = _GAPG
+    idmat = GG.IdentityMat(rep.n)
+    # Arrangement orbits are precisely the chains of length one modulo G.
+    # Avoid enumerating longer flags and their recursive classes.
+    for orbit in rep.arr.orbit_indices
+        ix = first(orbit)
+        d1 = Int(rep.arr.elements[ix].dimension)
+        0 < d1 < rep.n || continue
+        cd = DCP.chain_data(rep.arr, [ix])
+        Nperm = GG.Image(rep.arr.raw.iso, cd.normalizer)
+        Y = Any[Oscar.group_element(rep.P, g) for g in GG.AsSSortedList(Nperm)]
+        W = only(cd.subspaces)
+        Q1 = Dict{Any,Any}(g => _piece_matrix(Oscar.GAP.GapObj([]), W, rep.mats[g]) for g in Y)
+        Q2 = Dict{Any,Any}(g => _piece_matrix(W, idmat, rep.mats[g]) for g in Y)
+        scalar1 = Dict(g => GG.DCP_Scalar(GG.IdentityMat(d1), Q1[g]) for g in Y)
+        scalar2 = Dict(g => GG.DCP_Scalar(GG.IdentityMat(rep.n - d1), Q2[g]) for g in Y)
+        A = Any[g for g in Y if scalar1[g] != GG.fail && scalar2[g] != GG.fail]
+        B = Any[g for g in A if scalar1[g] == 1]
+        # On ker(chi1), restricting chi2 - chi1 is exactly chi2.
+        beta = Dict{Any,Rational{Int}}(g => _m1(Int(GG.EB_CycExp(scalar2[g], Int(Oscar.order(g)))) // Int(Oscar.order(g))) for g in B)
+        all(iszero, values(beta)) && continue
+        plusone(M) = Oscar.GAP.GapObj([
+            [i == 1 && j == 1 ? GG.One(GG.E(1)) :
+             (i == 1 || j == 1 ? GG.Zero(GG.E(1)) : M[i-1][j-1])
+             for j in 1:d1+1] for i in 1:d1+1], recursive=true)
+        affine = Dict{Any,Any}(g => plusone(Q1[g]) for g in Y)
+        matrices = d1 == 1 ? [Q2, affine] : [affine]
+        F = Any[FieldFactor(Int(GG.Length(first(values(M)))),
+            Dict{Any,Vector{Rational{Int}}}(g => projective_invariant(M[g]) for g in Y),
+            Dict{Any,Any}(g => GG.TraceMat(M[g]) for g in Y), M) for M in matrices]
+        push!(out, IndexedSymbol(rep.P, Any[], B, Y, 2, [beta], Dict(), field=F))
+    end
+    return out
+end
+
+"""
+    plus_divisor_symbols(rep; omega = false)
 
 The divisor symbols of the class `[P(1 + V) with G]` that come from the divisor `P(V)`: the symbols `(A, G/A acting on k(P(V)), +-gamma_0)`
 of `psi_{0}[P(V)](O(-1)) + psi_{0}[P(V)](O(1))` (Theorem 8.5 of KT-repr), with the field datum recorded. Returns an `IndexedClass` of
 dimension `n` with the empty index set, containing only the terms with `d = n - 1` (the generic terms of the two summands, computed without
-the chains because the chain terms of `projective_class` have a smaller `d`). The term
-with a torus coming from `omega` is not included. These are the candidates for incompressible symbols in Theorem 11.2 and Section 10.
+the chains because the chain terms of `projective_class` have a smaller `d`). By default the terms
+with a torus coming from `omega` are not included. Set `omega = true` to add
+`omega_divisor_symbols(rep)`, currently supported only in dimension three.
+The default two psi terms are the candidates for incompressible symbols in Theorem 11.2 and Section 10.
 """
-function plus_divisor_symbols(rep::LinearRepresentation)
+function plus_divisor_symbols(rep::LinearRepresentation; omega::Bool = false)
     c = _generic_class(rep; fields = true)     # the only terms with d = n - 1 of projective_class are the generic term, the others have d <= n - 2
-    return indexed_psi(c, Int[]) + indexed_psi(indexed_negate_gamma(c), Int[])
+    psi = indexed_psi(c, Int[]) + indexed_psi(indexed_negate_gamma(c), Int[])
+    return omega ? psi + omega_divisor_symbols(rep) : psi
 end
 
 """
