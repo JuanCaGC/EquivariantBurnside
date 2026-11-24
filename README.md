@@ -2,7 +2,7 @@
 
 A Julia package, to be used together with [OSCAR](https://www.oscar-system.org), for computing equivariant Burnside invariants of finite group actions.
 
-Status: early development. Phase 0 is done: the working code of `legacy/` has been reorganized into a package under `src/`, with tests and scripts, without changing its mathematics or its numerical output.
+Status: research code under active development, as part of a master's thesis. The working code of `legacy/` was reorganized into a package under `src/` without changing its mathematics or its numerical output, and the classes of linear actions on projective spaces are now computed by an implementation of the Kresch-Tschinkel recursion. The results have not been peer reviewed, and the checks described below are computational.
 
 ## Install and run
 
@@ -37,7 +37,17 @@ Run the tests with `Pkg.test()` in the Julia session. The original command line 
 
 Inputs are finite groups given as OSCAR groups or raw GAP groups. Individual functions keep the input requirements of the frozen code, in particular symbol evaluation uses raw GAP groups.
 
-Not implemented yet: the class of an action on a projective space or a toric variety, the Kresch-Tschinkel recursion (arXiv:2108.00518), and anything for general varieties. The function field part of a symbol is not recorded or computed.
+### Linear actions on projective spaces
+
+- `linrep(G)` wraps a finite matrix group as a `LinearRepresentation`. `projective_class(rep)` and `projective_plus_class(rep)` compute the class of P(V) and of P(1 + V) with the action of G by the recursion of Kresch and Tschinkel (arXiv:2108.00518, Theorems 8.4 and 8.5), as an integer combination of indexed symbols (`IndexedClass`). The operations used by the recursion are exposed as `indexed_psi`, `indexed_tau`, `indexed_eta`, `indexed_omega`, `indexed_restrict`, `indexed_induce` and `indexed_product`. `projective_bc_class` and `projective_plus_bc_class` give the image in BC_n(G/C).
+- Field datum. Each symbol carries a presentation of its function field as a product of projective spaces with the action of the group through lift matrices (`FieldFactor`). `field_fixed_signature` records which subgroups have a fixed point, and `compare_fields` returns `:equal`, `:different` or `:unknown` for two fields with the same group data. `:unknown` is a real outcome and not a failure.
+- Dimension three. `plus_divisor_symbols(rep; omega = true)` and `omega_divisor_symbols(rep)` return the divisor symbols of P(1 + V), and `certify_incompressible_dim3` builds a certificate of incompressibility for a divisor symbol. `certified = false` means not decided, it is not a proof of compressibility. `epsilon_twist` and `compare_plus_divisors` compare the classes of the twists by a character.
+
+How these were checked: against the tables and examples printed in the papers (the S4 class, the dimension two cases), against an independently written second implementation of the operations, by invariance under a change of basis and under twisting by a character, and by mutation testing of the source. Dimension four and above has no printed reference beyond the agreement of the two implementations.
+
+### Not implemented
+
+Classes of actions on general varieties, toric varieties in dimension three, the omega symbols of divisors above dimension three, and a decision procedure for incompressibility (only certificates).
 
 ## Legacy snapshot
 
